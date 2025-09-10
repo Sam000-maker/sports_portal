@@ -1,0 +1,43 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<h1>Users</h1>
+<form method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search">
+  <button type="submit">Search</button>
+</form>
+
+<table>
+  <thead><tr><th>Username</th><th>Email</th><th>Role</th><th>Actions</th></tr></thead>
+  <tbody>
+  {% for u in page.object_list %}
+    <tr>
+      <td>{{ u.username }}</td>
+      <td>{{ u.email }}</td>
+      <td>{{ u.get_role_display }}</td>
+      <td>
+        <form method="post" action="{% url 'accounts:change_user_role' u.id %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}">
+          <select name="role">
+            {% for v,l in u.Roles.choices %}
+              <option value="{{ v }}" {% if v == u.role %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+          <input type="text" name="reason" placeholder="Reason (optional)">
+          <button type="submit">Update</button>
+        </form>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="4">No users.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="pagination">
+  {% if page.has_previous %}<a href="?page={{ page.previous_page_number }}&q={{ q }}">Prev</a>{% endif %}
+  <span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+  {% if page.has_next %}<a href="?page={{ page.next_page_number }}&q={{ q }}">Next</a>{% endif %}
+</div>
+{% endblock %}

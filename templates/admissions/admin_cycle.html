@@ -1,0 +1,150 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Admissions Control{% endblock %}
+
+{% block content %}
+  <!-- Page header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">Admissions Control</h2>
+      <small class="text-muted">Live, upcoming, and past cycles</small>
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-success btn-sm" href="{% url 'admissions:admin_cycle_start' %}">
+        <i class="bi bi-play-circle me-1"></i> Start  Cycle
+      </a>
+      <a class="btn btn-outline-primary btn-sm" href="{% url 'admissions:admin_cycle_extend' %}">
+        <i class="bi bi-calendar-plus me-1"></i> Extend / Reactivate Cycle
+      </a>
+      <a class="btn btn-outline-danger btn-sm" href="{% url 'admissions:admin_cycle_stop' %}">
+        <i class="bi bi-stop-circle me-1"></i> Stop Cycle
+      </a>
+    </div>
+  </div>
+
+  <!-- Live cycles -->
+  <div class="card admin-card shadow-sm mb-4">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">Live Cycles</span>
+      <span class="badge rounded-pill bg-success px-3 py-2">
+        {% if live_cycles %}{{ live_cycles|length }} in window{% else %}None{% endif %}
+      </span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 theme-table">
+          <thead class="theme-thead">
+            <tr>
+              <th>Cycle</th><th>Name</th><th>Window</th><th>Status</th><th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if live_cycles %}
+              {% for c in live_cycles %}
+                <tr>
+                  <td class="fw-semibold">{{ c.public_id }}</td>
+                  <td>{{ c.name }}</td>
+                  <td class="text-muted">{{ c.start_date }} → {{ c.end_date }}</td>
+                  <td>
+                    {% if c.is_active %}
+                      <span class="badge bg-success">Open</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary me-1"
+                       href="{% url 'admissions:admin_cycle_extend' %}?cycle={{ c.id }}">
+                      <i class="bi bi-calendar-plus me-1"></i> Extend
+                    </a>
+                    <a class="btn btn-sm btn-outline-danger"
+                       href="{% url 'admissions:admin_cycle_stop' %}?cycle={{ c.id }}">
+                      <i class="bi bi-stop-circle me-1"></i> Stop
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-4"><em>No cycles in window.</em></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upcoming cycles -->
+  <div class="card admin-card shadow-sm mb-4">
+    <div class="card-header fw-semibold">Upcoming Cycles</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 theme-table">
+          <thead class="theme-thead">
+            <tr>
+              <th>Cycle</th><th>Name</th><th>Window</th><th>Status</th><th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if upcoming_cycles %}
+              {% for c in upcoming_cycles %}
+                <tr>
+                  <td class="fw-semibold">{{ c.public_id }}</td>
+                  <td>{{ c.name }}</td>
+                  <td class="text-muted">{{ c.start_date }} → {{ c.end_date }}</td>
+                  <td>
+                    {% if c.is_active %}
+                      <span class="badge bg-info text-dark">Scheduled (will open)</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Draft / Inactive</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary me-1"
+                       href="{% url 'admissions:admin_cycle_extend' %}?cycle={{ c.id }}">
+                      <i class="bi bi-calendar-plus me-1"></i> Extend
+                    </a>
+                    <a class="btn btn-sm btn-outline-danger"
+                       href="{% url 'admissions:admin_cycle_stop' %}?cycle={{ c.id }}">
+                      <i class="bi bi-stop-circle me-1"></i> Stop
+                    </a>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="5" class="text-center text-muted py-4"><em>None scheduled.</em></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Past cycles -->
+  <div class="card admin-card shadow-sm">
+    <div class="card-header fw-semibold">Past Cycles</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 theme-table">
+          <thead class="theme-thead">
+            <tr>
+              <th>Cycle</th><th>Name</th><th>Window</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if past_cycles %}
+              {% for c in past_cycles %}
+                <tr>
+                  <td class="fw-semibold">{{ c.public_id }}</td>
+                  <td>{{ c.name }}</td>
+                  <td class="text-muted">{{ c.start_date }} → {{ c.end_date }}</td>
+                  <td><span class="badge bg-secondary">Closed</span></td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr><td colspan="4" class="text-center text-muted py-4"><em>No past cycles.</em></td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endblock %}

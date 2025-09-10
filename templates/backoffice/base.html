@@ -1,0 +1,141 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Backoffice{% endblock %}</title>
+
+  <!-- Bootstrap & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Project styles -->
+  <link href="{% static 'css/backoffice.css' %}" rel="stylesheet">
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-light">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm" role="navigation" aria-label="Backoffice">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="{% url 'backoffice:dashboard' %}">Sports Portal</a>
+
+
+      <button class="navbar-toggler"
+              type="button"
+              data-bs-toggle="offcanvas"
+              data-bs-target="#boMenu"
+              aria-controls="boMenu"
+              aria-label="Open menu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      {# Desktop/topnav: visible on lg+ thanks to navbar-expand-lg. On mobile we rely on offcanvas. #}
+      <div id="topnav" class="collapse navbar-collapse">
+        <ul class="navbar-nav ms-auto">
+          {% if user.is_authenticated %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:logout' %}">Logout</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">Login</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:register' %}">Register</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  {# Mobile offcanvas (d-lg-none): includes account links + sidebar in one place #}
+  <div class="offcanvas offcanvas-start d-lg-none " tabindex="-1" id="boMenu" aria-labelledby="boMenuLabel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title" id="boMenuLabel">Menu</h5>
+      <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+      <div class="sidebar-wrapper">
+        <ul class="nav flex-column nav-pills p-3 border-bottom">
+          {% if user.is_authenticated %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'backoffice:dashboard' %}">Backoffice</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:logout' %}">Logout</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:login' %}">Login</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'accounts:register' %}">Register</a></li>
+          {% endif %}
+        </ul>
+
+        {# Your sidebar links #}
+        {% include "backoffice/_sidebar.html" %}
+        {# No sidebar_extra block here to avoid duplication errors #}
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div class="row">
+      <!-- Sidebar: desktop/tablet only -->
+      <aside class="col-12 col-md-3 col-xl-2 p-0 border-end d-none d-lg-block">
+        <div class="sidebar-wrapper sticky-top min-vh-100">
+          {% include "backoffice/_sidebar.html" %}
+          {% block sidebar_extra %}{% endblock %}
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <main class="col-12 col-md-9 col-xl-10 p-4">
+        {% if messages %}
+          <div class="mb-3">
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm small py-2" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% block page_header %}{% endblock %}
+
+        <div class="content-surface card border-0 shadow-sm">
+          <div class="card-body">
+            {% block content %}{% endblock %}
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Highlight active links; close offcanvas on click -->
+  <script>
+    (function () {
+      try {
+        var path = window.location.pathname.replace(/\/+$/, "");
+        var links = document.querySelectorAll("aside a[href], .offcanvas a[href]");
+        links.forEach(function (a) {
+          var href = a.getAttribute("href");
+          if (!href || href.startsWith("#")) return;
+          var url = new URL(href, window.location.origin);
+          var clean = url.pathname.replace(/\/+$/, "");
+          if (clean === path) {
+            a.classList.add("active");
+            a.setAttribute("aria-current", "page");
+            var parentCollapse = a.closest(".collapse");
+            if (parentCollapse) {
+              var inst = bootstrap.Collapse.getOrCreateInstance(parentCollapse, { toggle: false });
+              inst.show();
+            }
+          }
+          a.addEventListener("click", function () {
+            var oc = document.getElementById("boMenu");
+            if (!oc) return;
+            var instance = bootstrap.Offcanvas.getInstance(oc);
+            if (instance) instance.hide();
+          });
+        });
+      } catch (e) {}
+    })();
+  </script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

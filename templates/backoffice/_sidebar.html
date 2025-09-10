@@ -1,0 +1,59 @@
+{% load nav_active %}
+<ul class="nav flex-column nav-pills sidebar-nav p-3 gap-1">
+
+  <!-- Dashboard -->
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'backoffice:dashboard' %}"
+       href="{% url 'backoffice:dashboard' %}">
+      <i class="bi bi-speedometer2 me-2"></i>
+      <span>Dashboard</span>
+    </a>
+  </li>
+
+  <!-- Users -->
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'backoffice:users_list' %}"
+       href="{% url 'backoffice:users_list' %}">
+      <i class="bi bi-people me-2"></i>
+      <span>Users</span>
+    </a>
+  </li>
+
+  <!-- Admissions -->
+  <li class="nav-item mt-3">
+    <span class="text-uppercase small text-muted ps-2">Admissions</span>
+  </li>
+
+  {% if request.user.is_staff %}
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'admissions:admin_cycle' %}"
+         href="{% url 'admissions:admin_cycle' %}">
+        <i class="bi bi-sliders me-2"></i>
+        <span>Admissions Control</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'admissions:my_applications' %}"
+         href="{% url 'admissions:my_applications' %}">
+        <i class="bi bi-collection me-2"></i>
+        <span>All Applications</span>
+      </a>
+    </li>
+  {% else %}
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'admissions:application_create' %}"
+         href="{% url 'admissions:application_create' %}">
+        <i class="bi bi-file-earmark-plus me-2"></i>
+        <span>Apply via Sports Quota</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'admissions:my_applications' %}"
+         href="{% url 'admissions:my_applications' %}">
+        <i class="bi bi-collection me-2"></i>
+        <span>My Applications</span>
+      </a>
+    </li>
+  {% endif %}
+
+</ul>

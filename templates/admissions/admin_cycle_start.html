@@ -1,0 +1,24 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Start Admissions{% endblock %}
+
+{% block content %}
+<h2 class="mb-3">Start / Reactivate Admissions Cycle</h2>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="d-flex gap-2">
+    <button class="btn btn-success" type="submit">
+      <i class="bi bi-play-circle me-1"></i> Start
+    </button>
+    <a class="btn btn-secondary" href="{% url 'admissions:admin_cycle' %}">Cancel</a>
+  </div>
+</form>
+
+<hr class="my-4">
+
+<div class="alert alert-info small mb-0">
+  You can run multiple cycles at the same time. Starting a cycle with an existing name
+  will reactivate/update that specific cycle; starting with a new name creates a parallel one.
+</div>
+{% endblock %}

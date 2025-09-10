@@ -1,0 +1,42 @@
+	/*
+  	Flaticon icon font: Flaticon
+  	Creation date: 06/02/2019 09:32
+  	*/
+
+@font-face {
+  font-family: "Flaticon";
+  src: url("../../flaticon/racing/Flaticon.eot");
+  src: url("../../flaticon/racing/Flaticon.eot?#iefix") format("embedded-opentype"),
+       url("../../flaticon/racing/Flaticon.woff2") format("woff2"),
+       url("../../flaticon/racing/Flaticon.woff") format("woff"),
+       url("../../flaticon/racing/Flaticon.ttf") format("truetype"),
+       url("../../flaticon/racing/Flaticon.svg#Flaticon") format("svg");
+  font-weight: normal;
+  font-style: normal;
+}
+
+@media screen and (-webkit-min-device-pixel-ratio:0) {
+  @font-face {
+    font-family: "Flaticon";
+    src: url("./Flaticon.svg#Flaticon") format("svg");
+  }
+}
+
+[class^="flaticon-"]:before, [class*=" flaticon-"]:before,
+[class^="flaticon-"]:after, [class*=" flaticon-"]:after {   
+  font-family: Flaticon;
+        font-size: 16px;
+font-style: normal;
+}
+
+.flaticon-shopping-cart:before { content: "\f100"; }
+.flaticon-magnifier:before { content: "\f101"; }
+.flaticon-left-arrow:before { content: "\f102"; }
+.flaticon-right-arrow:before { content: "\f103"; }
+.flaticon-ticket:before { content: "\f104"; }
+.flaticon-login:before { content: "\f105"; }
+.flaticon-share:before { content: "\f106"; }
+.flaticon-race-car:before { content: "\f107"; }
+.flaticon-speedometer:before { content: "\f108"; }
+.flaticon-racing-helmet:before { content: "\f109"; }
+.flaticon-trophy:before { content: "\f10a"; }

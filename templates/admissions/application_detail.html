@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Application #{{ object.id }}</h2>
+<p><strong>Applicant:</strong> {{ object.applicant }}</p>
+<p><strong>Cycle:</strong> {{ object.cycle }}</p>
+<p><strong>Sport:</strong> {{ object.sport }} | <strong>Level:</strong> {{ object.get_level_display }}</p>
+<p><strong>Experience:</strong> {{ object.years_experience }} years</p>
+<p><strong>Achievements:</strong><br>{{ object.achievements|linebreaks }}</p>
+<p><strong>Status:</strong> {{ object.get_status_display }}</p>
+
+<h3>Documents</h3>
+<ul>
+  {% for d in object.documents.all %}
+    <li>{{ d.get_doc_type_display }} — <a href="{{ d.file.url }}" target="_blank">View</a> ({{ d.uploaded_at|date:"Y-m-d" }})</li>
+  {% empty %}
+    <li>No documents yet.</li>
+  {% endfor %}
+</ul>
+
+{% if not object.locked or request.user.is_staff %}
+  <a class="btn btn-secondary" href="{% url 'admissions:document_upload' object.pk %}">Upload Document</a>
+{% endif %}
+
+{% if request.user.is_staff %}
+  <hr>
+  <h3>Admin Decision</h3>
+  <form method="post" action="{% url 'admissions:application_decision' object.pk %}">
+    {% csrf_token %}
+    <textarea name="notes" class="form-control" placeholder="Notes (optional)"></textarea>
+    <div class="mt-2">
+      <button name="action" value="under_review" class="btn btn-warning">Mark Under Review</button>
+      <button name="action" value="approve" class="btn btn-success">Approve</button>
+      <button name="action" value="reject" class="btn btn-danger">Reject</button>
+    </div>
+  </form>
+  <p class="text-muted mt-2">Locked: {{ object.locked|yesno:"Yes,No" }}</p>
+{% endif %}
+{% endblock %}

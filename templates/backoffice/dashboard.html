@@ -1,0 +1,112 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Dashboard · Backoffice{% endblock %}
+
+{% block content %}
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h4 mb-0 fw-semibold">Overview</h1>
+  </div>
+
+  <!-- KPI row -->
+  <div class="row g-3">
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Total Users</div>
+              <div class="h3 mb-0 fw-semibold">{{ total_users }}</div>
+            </div>
+            <div class="opacity-75">
+              <i class="bi bi-people h2 m-0"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Active Tournaments</div>
+              <div class="h3 mb-0 fw-semibold">{{ kpi.active_tournaments }}</div>
+            </div>
+            <div class="opacity-75">
+              <i class="bi bi-trophy h2 m-0"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Pending Bookings</div>
+              <div class="h3 mb-0 fw-semibold">{{ kpi.pending_bookings }}</div>
+            </div>
+            <div class="opacity-75">
+              <i class="bi bi-calendar2-check h2 m-0"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Pending Admissions</div>
+              <div class="h3 mb-0 fw-semibold">{{ kpi.pending_admissions }}</div>
+            </div>
+            <div class="opacity-75">
+              <i class="bi bi-file-earmark-text h2 m-0"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Users by role -->
+  <div class="d-flex align-items-center justify-content-between mt-4 mb-2">
+    <h2 class="h6 mb-0 text-uppercase text-muted">Users by Role</h2>
+  </div>
+
+  <div class="card admin-card shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 theme-table">
+          <thead class="theme-thead">
+            <tr>
+              <th>Role</th>
+              <th class="text-end">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in by_role %}
+              <tr>
+                <td class="fw-semibold">{{ r.role|capfirst }}</td>
+                <td class="text-end">{{ r.total }}</td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted py-4">
+                  <em>No users yet. Quiet place.</em>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <p class="text-muted small mt-3 mb-0">Server time: {{ now }}</p>
+{% endblock %}

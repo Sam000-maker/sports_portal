@@ -1,0 +1,17 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Extend Cycle{% endblock %}
+
+{% block content %}
+<h2 class="mb-3">Extend Admissions Cycle</h2>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  {{ form.as_p }}
+  <div class="d-flex gap-2">
+    <button class="btn btn-primary" type="submit">
+      <i class="bi bi-calendar-plus me-1"></i> Extend
+    </button>
+    <a class="btn btn-secondary" href="{% url 'admissions:admin_cycle' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
