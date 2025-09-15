@@ -1,17 +1,137 @@
 {% extends "backoffice/base.html" %}
-{% block title %}Stop Cycle{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Stop Cycle" %}{% endblock %}
 
 {% block content %}
-<h2 class="mb-3">Stop Admissions Cycle</h2>
+<div class="container py-4">
 
-<form method="post" novalidate>
-  {% csrf_token %}
-  {{ form.as_p }}
-  <div class="d-flex gap-2">
-    <button class="btn btn-danger" type="submit">
-      <i class="bi bi-stop-circle me-1"></i> Stop
-    </button>
-    <a class="btn btn-secondary" href="{% url 'admissions:admin_cycle' %}">Cancel</a>
+  <!-- Page header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">{% trans "Stop Admissions Cycle" %}</h2>
+      <small class="text-muted">{% trans "Pick an active cycle and end it immediately." %}</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'admissions:admin_cycle' %}">
+        <i class="bi bi-arrow-left me-1"></i> {% trans "Back to cycles" %}
+      </a>
+    </div>
   </div>
-</form>
+
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'secondary' }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <!-- Left: Guidance -->
+    <div class="col-md-4">
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">{% trans "Before you stop" %}</div>
+        <div class="card-body small">
+          <ul class="ps-3 mb-0">
+            <li class="mb-2">{% trans "Stopping sets the end date to today." %}</li>
+            <li class="mb-2">{% trans "Applicants will no longer be able to submit." %}</li>
+            <li class="mb-0 text-danger">{% trans "This action cannot be undone." %}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card admin-card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">{% trans "Preview" %}</span>
+          <span class="badge rounded-pill bg-info px-3 py-2" id="pvStatus">{% trans "Draft" %}</span>
+        </div>
+        <div class="card-body">
+          <div class="small">
+            <div class="text-muted">{% trans "Cycle" %}</div>
+            <div id="pvCycle" class="mb-2">—</div>
+          </div>
+          <div class="small text-muted">
+            {% trans "Cycle will be closed on today’s date once confirmed." %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Form -->
+    <div class="col-md-8">
+      <form method="post" novalidate id="stopCycleForm" class="needs-validation">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">{% trans "Select cycle" %}</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.cycle.id_for_label }}">{{ form.cycle.label }}</label>
+              {{ form.cycle }}
+              {% if form.cycle.help_text %}<div class="form-text">{{ form.cycle.help_text }}</div>{% endif %}
+              {% for e in form.cycle.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="card admin-card shadow-sm">
+          <div class="card-header fw-semibold">{% trans "Action" %}</div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-danger" type="submit">
+                <i class="bi bi-stop-circle me-1"></i> {% trans "Stop" %}
+              </button>
+              <a class="btn btn-outline-secondary" href="{% url 'admissions:admin_cycle' %}">
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+          <strong>{% trans "Please fix the errors below." %}</strong>
+          <ul class="mb-0 small">
+            {% for field in form.visible_fields %}
+              {% if field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</li>
+              {% endif %}
+            {% endfor %}
+            {% if form.non_field_errors %}
+              {% for err in form.non_field_errors %}
+                <li>{{ err }}</li>
+              {% endfor %}
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% block extra_body %}{% endblock %}
+<script>
+  // Live preview of which cycle will be stopped
+  (function () {
+    const cycleSelect = document.getElementById("{{ form.cycle.id_for_label }}");
+    const pvCycle  = document.getElementById("pvCycle");
+    const pvStatus = document.getElementById("pvStatus");
+
+    function updatePreview() {
+      const opt = cycleSelect ? cycleSelect.options[cycleSelect.selectedIndex] : null;
+      pvCycle.textContent = opt ? opt.text : "—";
+      pvStatus.textContent = (opt && opt.value) ? "{{ _('Ready') }}" : "{{ _('Draft') }}";
+      pvStatus.classList.remove("bg-info","bg-warning","bg-secondary");
+      pvStatus.classList.add(opt && opt.value ? "bg-danger" : "bg-info");
+    }
+
+    cycleSelect && cycleSelect.addEventListener("change", updatePreview);
+    updatePreview();
+  })();
+</script>
 {% endblock %}

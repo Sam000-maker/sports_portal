@@ -1,19 +1,19 @@
 {% extends "backoffice/base.html" %}
+{% load static %}
 {% block title %}Admissions Control{% endblock %}
 
 {% block content %}
-  <!-- Page header -->
-  <div class="d-flex align-items-center justify-content-between mb-4">
-    <div>
-      <h2 class="mb-0 fw-semibold">Admissions Control</h2>
-      <small class="text-muted">Live, upcoming, and past cycles</small>
-    </div>
+<div class="container py-4">
+
+  <!-- Header (matches dashboard look) -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h4 mb-0 fw-semibold">Admissions Control</h1>
     <div class="d-flex gap-2">
-      <a class="btn btn-outline-success btn-sm" href="{% url 'admissions:admin_cycle_start' %}">
-        <i class="bi bi-play-circle me-1"></i> Start  Cycle
+      <a class="btn btn-success btn-sm" href="{% url 'admissions:admin_cycle_start' %}">
+        <i class="bi bi-play-circle me-1"></i> Start Cycle
       </a>
-      <a class="btn btn-outline-primary btn-sm" href="{% url 'admissions:admin_cycle_extend' %}">
-        <i class="bi bi-calendar-plus me-1"></i> Extend / Reactivate Cycle
+      <a class="btn btn-primary btn-sm" href="{% url 'admissions:admin_cycle_extend' %}">
+        <i class="bi bi-calendar-plus me-1"></i> Extend / Reactivate
       </a>
       <a class="btn btn-outline-danger btn-sm" href="{% url 'admissions:admin_cycle_stop' %}">
         <i class="bi bi-stop-circle me-1"></i> Stop Cycle
@@ -21,20 +21,107 @@
     </div>
   </div>
 
-  <!-- Live cycles -->
-  <div class="card admin-card shadow-sm mb-4">
-    <div class="card-header d-flex align-items-center justify-content-between">
-      <span class="fw-semibold">Live Cycles</span>
-      <span class="badge rounded-pill bg-success px-3 py-2">
-        {% if live_cycles %}{{ live_cycles|length }} in window{% else %}None{% endif %}
-      </span>
+  <!-- KPI row (same card style as dashboard) -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-sm-6 col-lg-4">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Live Cycles</div>
+              <div class="h3 mb-0 fw-semibold">{{ counts.live|default:0 }}</div>
+              {% if live_next_close %}
+                <div class="small text-muted">Next closes in {{ live_next_close.end_date|timeuntil }}</div>
+              {% endif %}
+            </div>
+            <div class="opacity-75">
+              <i class="bi bi-activity h2 m-0"></i>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <div class="col-12 col-sm-6 col-lg-4">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Upcoming Cycles</div>
+              <div class="h3 mb-0 fw-semibold">{{ counts.upcoming|default:0 }}</div>
+              {% if upcoming_next_open %}
+                <div class="small text-muted">Opens in {{ upcoming_next_open.start_date|timeuntil }}</div>
+              {% endif %}
+            </div>
+            <div class="opacity-75">
+              <i class="bi bi-calendar-event h2 m-0"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-4">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Past Cycles</div>
+              <div class="h3 mb-0 fw-semibold">{{ counts.past|default:0 }}</div>
+              <div class="small text-muted">Closed / archived</div>
+            </div>
+            <div class="opacity-75">
+              <i class="bi bi-archive h2 m-0"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search (compact, like dashboard tone) -->
+<form method="get" class="mb-3" role="search" aria-label="Search cycles">
+  <label for="search-q" class="visually-hidden">Search cycles</label>
+  <div class="input-group input-group-sm">
+   
+
+    <input
+      id="search-q"
+      name="q"
+      type="text"
+      value="{{ q|default_if_none:'' }}"
+      class="form-control form-control-sm theme-input"
+      placeholder="Search by name or CYC-0001"
+      aria-describedby="search-addon"
+    />
+
+    <button type="submit" class="btn btn-primary">
+      Search
+    </button>
+    <a class="btn btn-outline-secondary" href="?">
+      Reset
+    </a>
+  </div>
+</form>
+
+
+  <!-- Live cycles -->
+  <div class="card admin-card shadow-sm mb-3">
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 theme-table">
+        <table class="table table-sm align-middle mb-0 theme-table">
           <thead class="theme-thead">
             <tr>
-              <th>Cycle</th><th>Name</th><th>Window</th><th>Status</th><th class="text-end">Actions</th>
+              <th colspan="7" class="bg-light fw-semibold">Live Cycles</th>
+            </tr>
+            <tr>
+              <th>Cycle</th>
+              <th>Name</th>
+              <th>Window</th>
+              <th>Closes</th>
+              <th class="text-end">Applications</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -44,11 +131,18 @@
                   <td class="fw-semibold">{{ c.public_id }}</td>
                   <td>{{ c.name }}</td>
                   <td class="text-muted">{{ c.start_date }} → {{ c.end_date }}</td>
+                  <td class="text-muted">{{ c.end_date|timeuntil }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{% url 'admissions:my_applications' %}?cycle_id={{ c.id }}">
+                      {{ c.app_count|default:0 }}
+                    </a>
+                  </td>
                   <td>
                     {% if c.is_active %}
                       <span class="badge bg-success">Open</span>
                     {% else %}
-                      <span class="badge bg-secondary">Inactive</span>
+                      <span class="badge bg-warning text-dark">Paused</span>
                     {% endif %}
                   </td>
                   <td class="text-end">
@@ -64,7 +158,11 @@
                 </tr>
               {% endfor %}
             {% else %}
-              <tr><td colspan="5" class="text-center text-muted py-4"><em>No cycles in window.</em></td></tr>
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                  <em>No cycles currently live.</em>
+                </td>
+              </tr>
             {% endif %}
           </tbody>
         </table>
@@ -73,14 +171,22 @@
   </div>
 
   <!-- Upcoming cycles -->
-  <div class="card admin-card shadow-sm mb-4">
-    <div class="card-header fw-semibold">Upcoming Cycles</div>
+  <div class="card admin-card shadow-sm mb-3">
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 theme-table">
+        <table class="table table-sm align-middle mb-0 theme-table">
           <thead class="theme-thead">
             <tr>
-              <th>Cycle</th><th>Name</th><th>Window</th><th>Status</th><th class="text-end">Actions</th>
+              <th colspan="7" class="bg-light fw-semibold">Upcoming Cycles</th>
+            </tr>
+            <tr>
+              <th>Cycle</th>
+              <th>Name</th>
+              <th>Window</th>
+              <th>Opens</th>
+              <th class="text-end">Applications</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -90,11 +196,18 @@
                   <td class="fw-semibold">{{ c.public_id }}</td>
                   <td>{{ c.name }}</td>
                   <td class="text-muted">{{ c.start_date }} → {{ c.end_date }}</td>
+                  <td class="text-muted">{{ c.start_date|timeuntil }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{% url 'admissions:my_applications' %}?cycle_id={{ c.id }}">
+                      {{ c.app_count|default:0 }}
+                    </a>
+                  </td>
                   <td>
                     {% if c.is_active %}
-                      <span class="badge bg-info text-dark">Scheduled (will open)</span>
+                      <span class="badge bg-info text-dark">Scheduled</span>
                     {% else %}
-                      <span class="badge bg-secondary">Draft / Inactive</span>
+                      <span class="badge bg-secondary">Draft</span>
                     {% endif %}
                   </td>
                   <td class="text-end">
@@ -110,7 +223,11 @@
                 </tr>
               {% endfor %}
             {% else %}
-              <tr><td colspan="5" class="text-center text-muted py-4"><em>None scheduled.</em></td></tr>
+              <tr>
+                <td colspan="7" class="text-center text-muted py-4">
+                  <em>No upcoming cycles.</em>
+                </td>
+              </tr>
             {% endif %}
           </tbody>
         </table>
@@ -120,13 +237,20 @@
 
   <!-- Past cycles -->
   <div class="card admin-card shadow-sm">
-    <div class="card-header fw-semibold">Past Cycles</div>
     <div class="card-body p-0">
       <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 theme-table">
+        <table class="table table-sm align-middle mb-0 theme-table">
           <thead class="theme-thead">
             <tr>
-              <th>Cycle</th><th>Name</th><th>Window</th><th>Status</th>
+              <th colspan="6" class="bg-light fw-semibold">Past Cycles</th>
+            </tr>
+            <tr>
+              <th>Cycle</th>
+              <th>Name</th>
+              <th>Window</th>
+              <th class="text-end">Applications</th>
+              <th>Status</th>
+              <th class="text-end">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -136,15 +260,34 @@
                   <td class="fw-semibold">{{ c.public_id }}</td>
                   <td>{{ c.name }}</td>
                   <td class="text-muted">{{ c.start_date }} → {{ c.end_date }}</td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{% url 'admissions:my_applications' %}?cycle_id={{ c.id }}">
+                      {{ c.app_count|default:0 }}
+                    </a>
+                  </td>
                   <td><span class="badge bg-secondary">Closed</span></td>
+                  <td class="text-end">
+                    <a class="btn btn-sm btn-outline-primary"
+                       href="{% url 'admissions:admin_cycle_extend' %}?cycle={{ c.id }}">
+                      <i class="bi bi-arrow-repeat me-1"></i> Reactivate
+                    </a>
+                  </td>
                 </tr>
               {% endfor %}
             {% else %}
-              <tr><td colspan="4" class="text-center text-muted py-4"><em>No past cycles.</em></td></tr>
+              <tr>
+                <td colspan="6" class="text-center text-muted py-4">
+                  <em>No past cycles.</em>
+                </td>
+              </tr>
             {% endif %}
           </tbody>
         </table>
       </div>
     </div>
   </div>
+
+  <p class="text-muted small mt-3 mb-0">Server time: {{ now }}</p>
+</div>
 {% endblock %}

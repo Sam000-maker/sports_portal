@@ -82,15 +82,17 @@
       <!-- Main content -->
       <main class="col-12 col-md-9 col-xl-10 p-4">
         {% if messages %}
-          <div class="mb-3">
-            {% for message in messages %}
-              <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm small py-2" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
+  {% for message in messages|slice:"-1" %}
+    <div class="mb-3">
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm small py-2" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+
+
 
         {% block page_header %}{% endblock %}
 

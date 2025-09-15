@@ -1,17 +1,109 @@
 {% extends "base.html" %}
-{% block title %}Register{% endblock %}
+{% block title %}College Sports · Register{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-6">
-    <div class="card shadow-sm">
-      <div class="card-body">
-        <h5 class="card-title mb-3">Create an account</h5>
-        <form method="post">{% csrf_token %}
-          {{ form.as_p }}
-          <button class="btn btn-primary w-100">Register</button>
-        </form>
+<section class="signup-hero py-4 py-md-5">
+  <div class="row justify-content-center g-4">
+    <div class="col-md-8 col-lg-6 col-xl-5">
+      <div class="card shadow border-0 lift-on-hover">
+        <!-- Scoreboard header -->
+        <div class="card-header border-0 bg-dark text-white py-3 scoreboard">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-2">
+              <span class="score-dot"></span>
+              <span class="small text-uppercase opacity-75">College Sports Portal</span>
+            </div>
+            <i class="bi bi-whatsapp fs-5 d-none"></i> {# placeholder to keep icon spacing consistent if needed #}
+            <i class="bi bi-flag-fill fs-5"></i>
+          </div>
+          <div class="mt-2 lh-1">
+            <h1 class="h4 mb-0 fw-semibold tracking-wide">Create an account</h1>
+            <div class="tiny-led mt-1"></div>
+          </div>
+        </div>
+
+        <div class="card-body p-4 p-md-5">
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+
+            <!-- Your RegisterForm adds form-control classes, so as_p is fine -->
+            <div class="form-stack">
+              {{ form.as_p }}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mt-3">
+              <i class="bi bi-person-plus me-1"></i> Sign up
+            </button>
+
+            <p class="text-muted mt-3 small mb-0">
+              By signing up, you agree to our <a href="" class="link-secondary">Terms</a> and <a href="" class="link-secondary">Privacy</a>.
+            </p>
+          </form>
+
+          <div class="text-center mt-4">
+            <span class="text-muted">Already have an account?</span>
+            <a href="{% url 'accounts:login' %}">Login</a>
+          </div>
+        </div>
       </div>
+
+      <!-- Small perks panel -->
+      <div class="mt-3 p-3 rounded-3 bg-body-tertiary border small">
+        <div class="d-flex align-items-start">
+          <i class="bi bi-clipboard-check me-2"></i>
+          <div>
+            Use your campus email if applicable. You can update your profile and avatar after signup.
+          </div>
+        </div>
+      </div>
+
+      <p class="text-center text-muted small mt-3">
+        Built with Bootstrap 5. Play fair, protect your account.
+      </p>
     </div>
   </div>
-</div>
+</section>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Turf-inspired backdrop with faint field lines */
+  .signup-hero {
+    background:
+      radial-gradient(60rem 60rem at -10% -10%, rgba(13,110,253,.08), transparent 40%),
+      radial-gradient(45rem 45rem at 110% 0%, rgba(32,201,151,.12), transparent 45%),
+      repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,.02) 0 24px,
+        rgba(0,0,0,.05) 24px 25px
+      );
+    border-radius: .75rem;
+  }
+
+  /* Card micro-interaction */
+  .lift-on-hover { transition: transform .15s ease, box-shadow .15s ease; }
+  .lift-on-hover:hover { transform: translateY(-2px); box-shadow: 0 .75rem 1.5rem rgba(0,0,0,.12); }
+
+  /* Scoreboard look */
+  .scoreboard { position: relative; }
+  .score-dot {
+    display: inline-block; width: .6rem; height: .6rem; border-radius: 50%;
+    background: #20c997; box-shadow: 0 0 .5rem rgba(32,201,151,.8);
+  }
+  .tracking-wide { letter-spacing: .04em; }
+  .tiny-led {
+    height: 4px; width: 100%;
+    background-image: radial-gradient(circle at 2px 2px, rgba(255,255,255,.9) 1px, transparent 2px);
+    background-size: 8px 8px; opacity: .25;
+  }
+
+  /* as_p outputs <p> wrappers; treat them like proper form groups */
+  .form-stack p { margin-bottom: 1rem; }
+  .form-stack p:last-child { margin-bottom: 0; }
+  .form-stack label { display: block; margin-bottom: .35rem; font-weight: 500; }
+</style>
 {% endblock %}

@@ -158,11 +158,11 @@ USE_TZ = True
 # ------------------------------------------------------------------------------
 # Static & Media
 # ------------------------------------------------------------------------------
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = ROOT_DIR / "staticfiles"
 
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = ROOT_DIR / "media"
 
 # WhiteNoise: compress + cache-bust
@@ -285,12 +285,9 @@ LOGGING = {
         },
     },
     "loggers": {
-        "django": {"handlers": ["console"], "level": LOG_LEVEL},
-        "django.request": {
-            "handlers": ["console", "mail_admins"] if not DEBUG else ["console"],
-            "level": "ERROR",
-            "propagate": False,
-        },
+        "django": {"handlers": ["console"], "level": "INFO"},
+        "django.utils.autoreload": {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.server": {"handlers": ["console"], "level": "INFO", "propagate": False},
         # Less noise from migrations and DB backend
         "django.db.backends": {"handlers": ["console"], "level": "WARNING"},
     },

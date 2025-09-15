@@ -1,4 +1,3 @@
-# admissions/models.py
 from __future__ import annotations
 
 from django.conf import settings
@@ -6,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.core.validators import (
     MaxValueValidator,
     MinValueValidator,
+    RegexValidator,
     FileExtensionValidator,
 )
 from django.db import models
@@ -15,17 +15,18 @@ User = settings.AUTH_USER_MODEL
 
 
 def validate_file_size(f):
-    # 5 MB cap because people love uploading 48MP scans of their thumb.
     max_mb = 5
     if f.size > max_mb * 1024 * 1024:
         raise ValidationError(f"File too large. Max size is {max_mb} MB.")
 
 
+def validate_image_size(f):
+    max_mb = 3
+    if f.size > max_mb * 1024 * 1024:
+        raise ValidationError(f"Profile photo too large. Max size is {max_mb} MB.")
+
+
 class ApplicationCycle(models.Model):
-    """
-    Admissions happen in cycles (e.g., '2025-26 UG', '2025 PG').
-    Multiple cycles can be active in parallel.
-    """
     name = models.CharField(max_length=120, unique=True)
     start_date = models.DateField()
     end_date = models.DateField()
@@ -38,10 +39,8 @@ class ApplicationCycle(models.Model):
     def __str__(self) -> str:
         return self.name
 
-    # Human-readable public ID, no DB change required
     @property
     def public_id(self) -> str:
-        # CYC-0007 style. Adjust width if you expect > 9999 cycles for some reason.
         return f"CYC-{self.pk:04d}" if self.pk else "CYC-UNSAVED"
 
     def clean(self):
@@ -54,9 +53,6 @@ class ApplicationCycle(models.Model):
         return self.is_active and self.start_date <= today <= self.end_date
 
     def extend_to(self, new_end_date):
-        """
-        Extend the cycle’s end_date forward in time. Refuse shrinkage or past dates.
-        """
         if new_end_date < self.end_date:
             raise ValidationError("New end date must be after current end date.")
         if new_end_date < timezone.localdate():
@@ -79,15 +75,13 @@ class SportsQuotaApplication(models.Model):
         NATIONAL = "national", "National"
         INTERNATIONAL = "international", "International"
 
-    # TEMPORARILY NULLABLE so you can migrate safely, then backfill, then flip to required.
+    # Applicant linkage
     applicant = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        related_name="applications",
-        null=True,
-        blank=True,
+        User, on_delete=models.CASCADE, related_name="applications", null=True, blank=True
     )
     cycle = models.ForeignKey(ApplicationCycle, on_delete=models.PROTECT, related_name="applications")
+
+    # Core sports fields
     sport = models.CharField(max_length=80, db_index=True)
     playing_position = models.CharField(max_length=80, blank=True)
     level = models.CharField(max_length=20, choices=Level.choices, db_index=True)
@@ -95,12 +89,36 @@ class SportsQuotaApplication(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(40)], default=0
     )
 
-    # Academic basics
-    previous_institution = models.CharField(max_length=200, blank=True)
-    academic_summary = models.TextField(blank=True, help_text="Marks/grades summary or notes.")
+    # Applicant details on the application itself
+    full_name = models.CharField(max_length=150)
+    date_of_birth = models.DateField(null=True, blank=True)
+    email = models.EmailField()
+    phone = models.CharField(
+        max_length=20,
+        validators=[RegexValidator(r"^[0-9+\-\s]{7,20}$", "Enter a valid phone number.")],
+    )
+    address_line1 = models.CharField(max_length=200)
+    address_line2 = models.CharField(max_length=200, blank=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    country = models.CharField(max_length=80, default="India")
+    profile_photo = models.ImageField(
+        upload_to="admissions/profile/%Y/%m/",
+        null=True,
+        blank=True,
+        validators=[validate_image_size, FileExtensionValidator(["jpg", "jpeg", "png"])],
+        help_text="JPG/PNG only. Max 3 MB.",
+    )
+    consent = models.BooleanField(
+        default=False,
+        help_text="I declare the information is true and I consent to data processing for admissions.",
+    )
 
-    # Achievements
-    achievements = models.TextField(blank=True, help_text="Major tournaments, medals, ranks.")
+    # Academics & achievements
+    previous_institution = models.CharField(max_length=200, blank=True)
+    academic_summary = models.TextField(blank=True)
+    achievements = models.TextField(blank=True)
 
     # Status and audit
     status = models.CharField(
@@ -113,7 +131,7 @@ class SportsQuotaApplication(models.Model):
     )
     review_notes = models.TextField(blank=True)
 
-    # Soft lock to prevent edits while review happens
+    # Edit lock
     locked = models.BooleanField(default=False)
 
     class Meta:
@@ -131,16 +149,16 @@ class SportsQuotaApplication(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.applicant} - {self.sport} - {self.cycle}"
+        return f"{self.full_name or self.applicant} - {self.sport} - {self.cycle}"
 
     def clean(self):
-        # Enforce cycle open window for new submissions.
-        # Let admins edit regardless during review.
+        # Enforce open window only for new records by regular users
         if not self.pk and self.cycle and not self.cycle.is_open:
             raise ValidationError("Applications are closed for this cycle.")
+        if not self.consent:
+            raise ValidationError("You must provide consent to submit the application.")
 
     def set_status(self, new_status: str, reviewer: "User", notes: str = ""):
-        """Centralized status transition with audit timestamps."""
         if new_status not in {s.value for s in self.Status}:
             raise ValidationError("Invalid status.")
         self.status = new_status
@@ -154,9 +172,6 @@ class SportsQuotaApplication(models.Model):
 
 
 class ApplicationDocument(models.Model):
-    """
-    Uploaded proofs: participation/merit certificates, ID, fitness cert, etc.
-    """
     class DocType(models.TextChoices):
         PARTICIPATION = "participation", "Participation Certificate"
         MERIT = "merit", "Merit/Medal Certificate"

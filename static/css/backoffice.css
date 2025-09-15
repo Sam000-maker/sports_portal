@@ -169,6 +169,21 @@ body.bg-light { background-color: var(--bo-bg) !important; }
   box-shadow: 0 0 0 .1rem color-mix(in oklab, var(--bo-primary) 20%, transparent);
 }
 
+/* Theme all cards */
+.card {
+  background: var(--bo-surface);
+  color: var(--bo-text);
+  border: 1px solid var(--bo-border);
+  border-radius: var(--bo-radius);
+  box-shadow: var(--bo-shadow-sm);
+}
+.card .card-header {
+  background: color-mix(in oklab, var(--bo-surface) 85%, var(--bo-primary) 6%);
+  color: var(--bo-text);
+  border-bottom: 1px solid var(--bo-border);
+}
+
+
 /* ========================================================================== */
 /* Mobile offcanvas menu (single drawer for nav + sidebar) */
 /* ========================================================================== */

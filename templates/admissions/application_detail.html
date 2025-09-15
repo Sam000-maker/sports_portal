@@ -1,38 +1,278 @@
-{% extends "base.html" %}
+{% extends "backoffice/base.html" %}
+{% load static %}
+{% block title %}Application #{{ object.pk|default:"—" }}{% endblock %}
+
 {% block content %}
-<h2>Application #{{ object.id }}</h2>
-<p><strong>Applicant:</strong> {{ object.applicant }}</p>
-<p><strong>Cycle:</strong> {{ object.cycle }}</p>
-<p><strong>Sport:</strong> {{ object.sport }} | <strong>Level:</strong> {{ object.get_level_display }}</p>
-<p><strong>Experience:</strong> {{ object.years_experience }} years</p>
-<p><strong>Achievements:</strong><br>{{ object.achievements|linebreaks }}</p>
-<p><strong>Status:</strong> {{ object.get_status_display }}</p>
+<div class="container py-4">
 
-<h3>Documents</h3>
-<ul>
-  {% for d in object.documents.all %}
-    <li>{{ d.get_doc_type_display }} — <a href="{{ d.file.url }}" target="_blank">View</a> ({{ d.uploaded_at|date:"Y-m-d" }})</li>
-  {% empty %}
-    <li>No documents yet.</li>
-  {% endfor %}
-</ul>
-
-{% if not object.locked or request.user.is_staff %}
-  <a class="btn btn-secondary" href="{% url 'admissions:document_upload' object.pk %}">Upload Document</a>
-{% endif %}
-
-{% if request.user.is_staff %}
-  <hr>
-  <h3>Admin Decision</h3>
-  <form method="post" action="{% url 'admissions:application_decision' object.pk %}">
-    {% csrf_token %}
-    <textarea name="notes" class="form-control" placeholder="Notes (optional)"></textarea>
-    <div class="mt-2">
-      <button name="action" value="under_review" class="btn btn-warning">Mark Under Review</button>
-      <button name="action" value="approve" class="btn btn-success">Approve</button>
-      <button name="action" value="reject" class="btn btn-danger">Reject</button>
+  <!-- Page header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">Application #{{ object.pk|default:"—" }}</h2>
+      <small class="text-muted">
+        {% if object.full_name %}{{ object.full_name }}{% else %}Unnamed applicant{% endif %}
+        {% if object.sport %} · {{ object.sport }}{% endif %}
+        {% if object.cycle %} · {{ object.cycle.name }} ({{ object.cycle.public_id }}){% endif %}
+      </small>
     </div>
-  </form>
-  <p class="text-muted mt-2">Locked: {{ object.locked|yesno:"Yes,No" }}</p>
-{% endif %}
+    <div class="d-flex align-items-center gap-2">
+      {% if object.status == 'approved' %}
+        <span class="badge rounded-pill bg-success px-3 py-2">Approved</span>
+      {% elif object.status == 'rejected' %}
+        <span class="badge rounded-pill bg-danger px-3 py-2">Rejected</span>
+      {% elif object.status == 'under_review' %}
+        <span class="badge rounded-pill bg-info px-3 py-2">Under Review</span>
+      {% else %}
+        <span class="badge rounded-pill bg-secondary px-3 py-2">Submitted</span>
+      {% endif %}
+      {% if object.locked %}
+        <span class="badge rounded-pill bg-warning text-dark px-3 py-2">Locked</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'secondary' }} mb-2">
+          {{ message }}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <!-- Left column: Profile + actions -->
+    <div class="col-md-3">
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Applicant</div>
+        <div class="card-body">
+          {% if object.profile_photo %}
+            <img class="img-fluid rounded-soft mb-2 w-100 border-soft" src="{{ object.profile_photo.url }}" alt="Profile photo">
+          {% else %}
+            <div class="ratio ratio-3x4 d-flex align-items-center justify-content-center rounded-soft border-soft mb-2">
+              <span class="text-muted">No photo</span>
+            </div>
+          {% endif %}
+
+          <div class="small">
+            <div class="text-muted">Name</div>
+            <div>{{ object.full_name|default:"—" }}</div>
+          </div>
+
+          <div class="small mt-2">
+            <div class="text-muted">Sport</div>
+            <div>{{ object.sport|default:"—" }}</div>
+          </div>
+
+          {% if request.user.is_staff %}
+            <div class="small mt-2">
+              <div class="text-muted">User</div>
+              {% if object.applicant %}
+                <div>{{ object.applicant.get_full_name|default:object.applicant.username }}</div>
+                <div class="text-muted">{{ object.applicant.email }}</div>
+              {% else %}
+                <div>—</div>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="d-grid gap-2">
+        {% if request.user.is_staff %}
+          <a href="{% url 'admissions:application_review' object.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil-square me-1"></i> Edit details
+          </a>
+          <a href="{% url 'admissions:document_upload' object.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-upload me-1"></i> Upload documents
+          </a>
+        {% elif object.applicant_id == request.user.id and not object.locked %}
+          <a href="{% url 'admissions:document_upload' object.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-upload me-1"></i> Upload documents
+          </a>
+        {% endif %}
+        <a href="{% url 'admissions:my_applications' %}" class="btn btn-sm btn-outline-dark">
+          <i class="bi bi-arrow-left me-1"></i> Back to list
+        </a>
+      </div>
+    </div>
+
+    <!-- Right column: Details -->
+    <div class="col-md-9">
+      <!-- Meta -->
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Meta</div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% if object.cycle %}
+              <div class="col-md-4">
+                <div class="text-muted small">Cycle</div>
+                <div class="fw-semibold">{{ object.cycle.name }} <span class="text-muted">({{ object.cycle.public_id }})</span></div>
+              </div>
+            {% endif %}
+            <div class="col-md-4">
+              <div class="text-muted small">Submitted</div>
+              <div>{{ object.submitted_at|date:"Y-m-d H:i" }}</div>
+            </div>
+            {% if object.reviewed_at %}
+              <div class="col-md-4">
+                <div class="text-muted small">Reviewed</div>
+                <div>{{ object.reviewed_at|date:"Y-m-d H:i" }}</div>
+              </div>
+            {% endif %}
+            {% if object.reviewer %}
+              <div class="col-md-4">
+                <div class="text-muted small">Reviewer</div>
+                <div>{{ object.reviewer.get_full_name|default:object.reviewer.username }}</div>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Applicant & Sport -->
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Applicant &amp; Sport</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="text-muted small">Level</div>
+              <div class="fw-semibold">{{ object.get_level_display|default:"—" }}</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Experience</div>
+              <div>{{ object.years_experience|default:"0" }} years</div>
+            </div>
+            <div class="col-md-4">
+              <div class="text-muted small">Position</div>
+              <div>{{ object.playing_position|default:"—" }}</div>
+            </div>
+
+            <div class="col-md-6">
+              <div class="text-muted small">Email</div>
+              <div>{{ object.email|default:"—" }}</div>
+            </div>
+            <div class="col-md-6">
+              <div class="text-muted small">Phone</div>
+              <div>{{ object.phone|default:"—" }}</div>
+            </div>
+
+            <div class="col-12">
+              <div class="text-muted small">Address</div>
+              <div>
+                {{ object.address_line1|default:"" }}
+                {% if object.address_line2 %}, {{ object.address_line2 }}{% endif %}
+                {% if object.city %}, {{ object.city }}{% endif %}
+                {% if object.postal_code %} {{ object.postal_code }}{% endif %}
+                {% if object.state %} {{ object.state }}{% endif %}
+                {% if object.country %} {{ object.country }}{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Academics & Achievements -->
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Academics &amp; Achievements</div>
+        <div class="card-body">
+          <div class="mb-2">
+            <div class="text-muted small">Previous institution</div>
+            <div>{{ object.previous_institution|default:"—" }}</div>
+          </div>
+          <div class="mb-2">
+            <div class="text-muted small">Academic summary</div>
+            <div style="white-space: pre-wrap;">{{ object.academic_summary|default:"—" }}</div>
+          </div>
+          <div>
+            <div class="text-muted small">Achievements</div>
+            <div style="white-space: pre-wrap;">{{ object.achievements|default:"—"|linebreaks }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Documents -->
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">Documents</span>
+          <span class="badge rounded-pill bg-secondary px-3 py-2">
+            {{ object.documents.count }} file{{ object.documents.count|pluralize }}
+          </span>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 theme-table">
+              <thead class="theme-thead">
+                <tr>
+                  <th>Type</th><th>File</th><th>Uploaded</th><th class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for doc in object.documents.all %}
+                  <tr>
+                    <td class="fw-semibold">{{ doc.get_doc_type_display }}</td>
+                    <td class="text-muted">{{ doc.file.name|default:"file" }}</td>
+                    <td class="text-muted">{{ doc.uploaded_at|date:"Y-m-d H:i" }}</td>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-outline-primary me-1" href="{{ doc.file.url }}" target="_blank" rel="noopener">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> View
+                      </a>
+                      <a class="btn btn-sm btn-outline-secondary" href="{{ doc.file.url }}" download>
+                        <i class="bi bi-download me-1"></i> Download
+                      </a>
+                    </td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="4" class="text-center text-muted py-4"><em>No documents.</em></td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {% if request.user.is_staff %}
+        <!-- Decision -->
+        <div class="card admin-card shadow-sm">
+          <div class="card-header fw-semibold">Decision</div>
+          <div class="card-body">
+            {% if object.locked %}
+              <div class="alert alert-warning mb-3">
+                This application is locked ({{ object.get_status_display }}). You can still add notes, but status changes are disabled.
+              </div>
+            {% endif %}
+            <form method="post">
+              {% csrf_token %}
+              <div class="row g-2 align-items-center">
+                <div class="col-md-12">
+                  <textarea name="notes" class="form-control" placeholder="Notes (optional)"></textarea>
+                </div>
+                <div class="col-md-12 mt-2 d-flex flex-wrap gap-2">
+                  <button name="action" value="under_review" class="btn btn-warning">
+                    <i class="bi bi-eye me-1"></i> Mark Under Review
+                  </button>
+                  <button name="action" value="approve" class="btn btn-success">
+                    <i class="bi bi-check2-circle me-1"></i> Approve
+                  </button>
+                  <button name="action" value="reject" class="btn btn-danger">
+                    <i class="bi bi-x-octagon me-1"></i> Reject
+                  </button>
+                </div>
+              </div>
+            </form>
+
+            {% if object.review_notes %}
+              <hr class="my-3">
+              <div class="small">
+                <div class="text-muted mb-1">Review notes</div>
+                <pre class="mb-0" style="white-space: pre-wrap;">{{ object.review_notes }}</pre>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 {% endblock %}

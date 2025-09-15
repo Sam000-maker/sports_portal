@@ -1,46 +1,144 @@
+{# templates/admissions/application_list.html #}
 {% extends "backoffice/base.html" %}
 {% block title %}Applications{% endblock %}
 
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-4">
-  <h2 class="mb-0 fw-semibold">
-    {% if request.user.is_staff %}All Applications{% else %}My Applications{% endif %}
-  </h2>
-  {% if request.user.is_staff %}
-    <span class="badge bg-info text-dark">Admin View</span>
-  {% endif %}
+  <div>
+    <h2 class="mb-0 fw-semibold">
+      {% if request.user.is_staff %}All Applications{% else %}My Applications{% endif %}
+    </h2>
+    <small class="text-muted">
+      {% if is_paginated %}
+        Showing {{ object_list|length }} of {{ page_obj.paginator.count }}
+      {% else %}
+        Total {{ object_list|length }}
+      {% endif %}
+    </small>
+
+    {# Applied filter summary (appears only when something is filtered) #}
+    {% if request.GET.sport or request.GET.status or request.GET.cycle_id %}
+      <div class="mt-2">
+        {% if request.GET.sport %}
+          <span class="badge rounded-pill text-bg-light me-1">
+            Sport: <strong class="ms-1">{{ request.GET.sport }}</strong>
+          </span>
+        {% endif %}
+        {% if request.GET.status %}
+          <span class="badge rounded-pill text-bg-light me-1">
+            Status: <strong class="ms-1">
+              {% for key, label in object_list.model.Status.choices %}
+                {% if key|stringformat:"s" == request.GET.status|stringformat:"s" %}{{ label }}{% endif %}
+              {% endfor %}
+            </strong>
+          </span>
+        {% endif %}
+        {% if request.GET.cycle_id %}
+          <span class="badge rounded-pill text-bg-light me-1">
+            Cycle: <strong class="ms-1">
+              {% with cid=request.GET.cycle_id %}
+                {% for c in available_cycles %}
+                  {% if c.id|stringformat:"s" == cid|stringformat:"s" %}
+                    {% if c.public_id %}{{ c.public_id }}{% else %}CYC-{{ c.id|stringformat:"04d" }}{% endif %} — {{ c.name }}
+                  {% endif %}
+                {% endfor %}
+              {% endwith %}
+            </strong>
+          </span>
+        {% endif %}
+        <a class="badge rounded-pill text-bg-secondary text-decoration-none" href="?">
+          Clear filters
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="d-flex align-items-center gap-2">
+    {% if request.user.is_staff %}
+      <span class="badge bg-info text-dark">Admin View</span>
+    {% else %}
+      <a class="btn btn-sm btn-primary" href="{% url 'admissions:application_create' %}">
+        <i class="bi bi-plus-lg me-1"></i> New Application
+      </a>
+    {% endif %}
+  </div>
 </div>
 
 {% if request.user.is_staff %}
-  <form method="get" class="row g-2 mb-4">
-    <div class="col-md-3">
-      <input type="text" name="sport" value="{{ request.GET.sport }}"
-             class="form-control form-control-sm theme-input" placeholder="Sport">
+  <div class="card admin-card shadow-sm mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <span class="fw-semibold">Filters</span>
+      {# Quick status chips #}
+      <div class="d-none d-md-flex gap-1">
+        {# Build links that keep current sport/cycle filters #}
+        {% with s=request.GET.sport c=request.GET.cycle_id %}
+          <a class="badge rounded-pill text-bg-light text-decoration-none"
+             href="?status=&{% if s %}sport={{ s|urlencode }}&{% endif %}{% if c %}cycle_id={{ c }}{% endif %}">
+            Any
+          </a>
+          <a class="badge rounded-pill bg-success text-decoration-none"
+             href="?status=approved&{% if s %}sport={{ s|urlencode }}&{% endif %}{% if c %}cycle_id={{ c }}{% endif %}">
+            Approved
+          </a>
+          <a class="badge rounded-pill bg-info text-dark text-decoration-none"
+             href="?status=under_review&{% if s %}sport={{ s|urlencode }}&{% endif %}{% if c %}cycle_id={{ c }}{% endif %}">
+            Under Review
+          </a>
+          <a class="badge rounded-pill bg-danger text-decoration-none"
+             href="?status=rejected&{% if s %}sport={{ s|urlencode }}&{% endif %}{% if c %}cycle_id={{ c }}{% endif %}">
+            Rejected
+          </a>
+          <a class="badge rounded-pill bg-secondary text-decoration-none"
+             href="?status=submitted&{% if s %}sport={{ s|urlencode }}&{% endif %}{% if c %}cycle_id={{ c }}{% endif %}">
+            Submitted
+          </a>
+        {% endwith %}
+      </div>
     </div>
+    <div class="card-body">
+      <form method="get" class="row g-2" role="search" aria-label="Application filters">
+        <div class="col-md-4">
+          <label for="flt-sport" class="form-label small text-muted mb-1">Sport</label>
+          <input id="flt-sport" type="text" name="sport" value="{{ request.GET.sport|default_if_none:'' }}"
+                 class="form-control form-control-sm theme-input" placeholder="e.g., Football">
+        </div>
 
-    <div class="col-md-3">
-      <select name="status" class="form-select form-select-sm theme-input">
-        <option value="">Any status</option>
-        {% for key, label in object_list.model.Status.choices %}
-          <option value="{{ key }}" {% if request.GET.status|stringformat:"s" == key|stringformat:"s" %}selected{% endif %}>
-            {{ label }}
-          </option>
-        {% endfor %}
-      </select>
-    </div>
+        <div class="col-md-4">
+          <label for="flt-status" class="form-label small text-muted mb-1">Status</label>
+          <select id="flt-status" name="status" class="form-select form-select-sm theme-input">
+            <option value="">Any status</option>
+            {% for key, label in object_list.model.Status.choices %}
+              <option value="{{ key }}" {% if request.GET.status|stringformat:"s" == key|stringformat:"s" %}selected{% endif %}>
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
 
-    <div class="col-md-3">
-      <input type="text" name="cycle_id" value="{{ request.GET.cycle_id }}"
-             class="form-control form-control-sm theme-input"
-             placeholder="Cycle (e.g., CYC-0007 or 7)">
-    </div>
+        <div class="col-md-4">
+          <label for="flt-cycle" class="form-label small text-muted mb-1">Cycle</label>
+          <select id="flt-cycle" name="cycle_id" class="form-select form-select-sm theme-input">
+            <option value="">Any cycle</option>
+            {% for c in available_cycles %}
+              <option value="{{ c.id }}"
+                {% if request.GET.cycle_id|stringformat:"s" == c.id|stringformat:"s" %}selected{% endif %}>
+                {% if c.public_id %}{{ c.public_id }}{% else %}CYC-{{ c.id|stringformat:"04d" }}{% endif %} — {{ c.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
 
-    <div class="col-md-3 text-md-end">
-      <button type="submit" class="btn btn-primary btn-sm">
-        <i class="bi bi-funnel me-1"></i> Filter
-      </button>
+        <div class="col-12 d-flex justify-content-end gap-2 mt-1">
+          <a href="?" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-circle me-1"></i> Reset
+          </a>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-funnel me-1"></i> Apply
+          </button>
+        </div>
+      </form>
     </div>
-  </form>
+  </div>
 {% endif %}
 
 <div class="card admin-card shadow-sm">
@@ -49,22 +147,57 @@
       <table class="table table-hover align-middle mb-0 theme-table">
         <thead class="theme-thead">
           <tr>
-            <th scope="col">App ID</th>
+            <th scope="col">App</th>
+            {% if request.user.is_staff %}
+              <th scope="col" class="d-none d-md-table-cell" style="min-width: 220px;">Applicant</th>
+            {% endif %}
             <th scope="col">Cycle</th>
-            <th scope="col">Sport</th>
-            <th scope="col">Level</th>
+            <th scope="col" class="d-none d-sm-table-cell">Sport</th>
+            <th scope="col" class="d-none d-lg-table-cell">Level</th>
             <th scope="col">Status</th>
-            <th scope="col">Submitted</th>
-            <th scope="col"></th>
+            <th scope="col" class="d-none d-md-table-cell">Submitted</th>
+            <th scope="col" class="text-end">Action</th>
           </tr>
         </thead>
         <tbody>
           {% for app in object_list %}
             <tr>
               <td class="fw-semibold">#{{ app.id }}</td>
-              <td class="text-muted">{{ app.cycle.public_id }}</td>
-              <td>{{ app.sport }}</td>
-              <td>{{ app.get_level_display }}</td>
+
+              {% if request.user.is_staff %}
+                <td class="text-truncate d-none d-md-table-cell" style="max-width: 260px;">
+                  {% if app.full_name %}
+                    {{ app.full_name }}
+                  {% elif app.applicant %}
+                    {% with fn=app.applicant.get_full_name %}
+                      {% if fn %}{{ fn }}{% else %}{{ app.applicant.username|default:app.applicant.email|default:"—" }}{% endif %}
+                    {% endwith %}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              {% endif %}
+
+              <td class="text-muted">
+                {% if app.cycle %}
+                  <span class="fw-semibold d-block">
+                    {% if app.cycle.public_id %}{{ app.cycle.public_id }}{% else %}CYC-{{ app.cycle.id|stringformat:"04d" }}{% endif %}
+                  </span>
+                  <small class="d-block text-muted">{{ app.cycle.name }}</small>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td class="d-none d-sm-table-cell">
+                {% if app.sport %}
+                  <span class="badge text-bg-secondary">{{ app.sport }}</span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td class="d-none d-lg-table-cell">{{ app.get_level_display|default:"—" }}</td>
 
               <td>
                 {% with s=app.status|stringformat:"s" %}
@@ -72,18 +205,19 @@
                     <span class="badge bg-success">Approved</span>
                   {% elif s == 'rejected' %}
                     <span class="badge bg-danger">Rejected</span>
-                  {% elif s == 'pending' %}
-                    <span class="badge bg-warning text-dark">Pending</span>
-                  {% elif s == 'under_review' or s == 'review' %}
+                  {% elif s == 'under_review' %}
                     <span class="badge bg-info text-dark">Under Review</span>
+                  {% elif s == 'submitted' %}
+                    <span class="badge bg-secondary">Submitted</span>
                   {% else %}
                     <span class="badge bg-secondary">{{ app.get_status_display }}</span>
                   {% endif %}
                 {% endwith %}
               </td>
 
-              <td class="text-muted small">{{ app.submitted_at|date:"Y-m-d H:i" }}</td>
-              <td>
+              <td class="text-muted small d-none d-md-table-cell">{{ app.submitted_at|date:"Y-m-d H:i" }}</td>
+
+              <td class="text-end">
                 <a class="btn btn-sm btn-outline-primary"
                    href="{% url 'admissions:application_detail' app.pk %}">
                   <i class="bi bi-box-arrow-in-right me-1"></i> Open
@@ -92,8 +226,16 @@
             </tr>
           {% empty %}
             <tr>
-              <td colspan="7" class="text-center text-muted py-4">
-                <em>Nothing here yet.</em>
+              <td colspan="{% if request.user.is_staff %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
+                <div class="py-2">
+                  <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                  <em>No applications found.</em>
+                </div>
+                {% if not request.user.is_staff %}
+                  <a class="btn btn-sm btn-primary mt-2" href="{% url 'admissions:application_create' %}">
+                    Create your first application
+                  </a>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}

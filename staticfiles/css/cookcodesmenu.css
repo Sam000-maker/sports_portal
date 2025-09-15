@@ -1,0 +1,252 @@
+/*!
+ * cookcodesmenu Responsive Mobile Menu v1.0 Based On slicknavmenu 
+ * (c) 2018 Nazmul Hussain
+ * licensed under MIT
+ * www.nazmul.info
+ * mailatnazmul@gmail.com
+ */
+*:hover,
+*:focus {
+  text-decoration: none;
+  border: none;
+  outline:none;
+}
+
+.cookcodesmenu_btn {
+  position: absolute;
+    display: block;
+    vertical-align: middle;
+    float: right;
+    padding: 0.438em 0.625em 0.438em 0.625em;
+    line-height: 1.125em;
+    cursor: pointer;
+    right: 20px;
+    top: -94px;
+}
+
+.cookcodesmenu_btn .cookcodesmenu_icon-bar + .cookcodesmenu_icon-bar {
+  margin-top: 0.188em;
+}
+
+.cookcodesmenu_menu {
+  *zoom: 1;
+}
+
+.cookcodesmenu_menu .cookcodesmenu_menutxt {
+  display: block;
+  line-height: 1.388em;
+  float: left;
+}
+
+.cookcodesmenu_menu .cookcodesmenu_icon {
+  float: left;
+  width: 30px;
+  height: auto;
+  margin: 0.188em 0 0 0.438em;
+}
+
+.cookcodesmenu_menu .cookcodesmenu_icon:before {
+  background: transparent;
+  width: 30px;
+  height: auto;
+  display: block;
+  content: "";
+  position: absolute;
+}
+
+.cookcodesmenu_menu .cookcodesmenu_no-text {
+  margin: 0;
+}
+
+.cookcodesmenu_menu .cookcodesmenu_icon-bar {
+  display: block;
+  width: 25px;
+  height: 3px;
+  margin-bottom: 4px;
+  border-radius: 1px;
+  -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+}
+
+.cookcodesmenu_menu:before {
+  content: " ";
+  display: table;
+}
+
+.cookcodesmenu_menu:after {
+  content: " ";
+  display: table;
+  clear: both;
+}
+
+.cookcodesmenu_nav {
+  clear: both;
+}
+
+.cookcodesmenu_nav ul {
+  display: block;
+}
+
+.cookcodesmenu_nav li {
+  display: block;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_arrow {
+  font-size: 0.8em;
+  margin: 0 0 0 0.4em;
+  float: right;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 15px;
+  font-size: 15px;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_item {
+  cursor: pointer;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_item a {
+  display: inline;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_row {
+  display: block;
+}
+
+.cookcodesmenu_nav a {
+  display: block;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_parent-link a {
+  display: inline;
+}
+
+.cookcodesmenu_brand {
+  float: left;
+}
+
+.menuHidden {
+  display: none !important;
+}
+
+.cookcodesmenu_menu {
+  font-size: 16px;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  background: #fff;
+  padding: 0;
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display:none;
+  top: 120px;
+}
+.cookcodesmenu_brand{
+	display:none;
+}
+.cookcodesmenu_menu * {
+  -webkit-box-sizing: border-box;
+          box-sizing: border-box;
+}
+
+.cookcodesmenu_menu .cookcodesmenu_menutxt {
+  color: #fff;
+  font-weight: bold;
+}
+
+.cookcodesmenu_menu .cookcodesmenu_icon-bar {
+  background-color: #333;
+}
+
+.cookcodesmenu_btn {
+  margin: 7px 5px 6px;
+  text-decoration: none;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0);
+}
+
+.cookcodesmenu_nav {
+  color: #fff;
+  margin: 0;
+  padding: 0 0 0;
+  font-size: 16px;
+  list-style: none;
+  overflow: hidden;
+  background:#2196f3;
+}
+
+.cookcodesmenu_nav li {
+  line-height: 40px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cookcodesmenu_nav li a {
+  padding: 8px 25px;
+  text-transform:capitalize;
+}
+
+.cookcodesmenu_nav ul {
+  list-style: none;
+  overflow: hidden;
+  padding: 0;
+}
+
+.cookcodesmenu_nav ul li a {
+  padding-left: 45px;
+}
+
+.cookcodesmenu_nav ul li ul li a {
+  padding-left: 70px;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_row:hover {
+  border-radius: 6px;
+  background: none;
+  color: #fff;
+}
+
+.cookcodesmenu_nav a {
+  text-decoration: none;
+  color: #fff;
+}
+
+.cookcodesmenu_nav a:hover {
+  text-decoration: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cookcodesmenu_nav a:active {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.cookcodesmenu_nav a:focus {
+  text-decoration: none;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_txtnode {
+  margin-left: 15px;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_item a {
+  padding: 0;
+  margin: 0;
+}
+
+.cookcodesmenu_nav .cookcodesmenu_parent-link a {
+  padding: 0;
+  margin: 0;
+}
+
+.cookcodesmenu_brand {
+  color: #fff;
+  font-size: 18px;
+  line-height: 30px;
+  padding: 7px 12px;
+  height: 44px;
+}
+
+body {
+  font-family: 'Open Sans', sans-serif;
+  margin: 0;
+}

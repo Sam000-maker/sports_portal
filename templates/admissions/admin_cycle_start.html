@@ -1,24 +1,202 @@
 {% extends "backoffice/base.html" %}
-{% block title %}Start Admissions{% endblock %}
+{% load i18n static %}
+{% block title %}{% trans "Start Admissions" %}{% endblock %}
 
 {% block content %}
-<h2 class="mb-3">Start / Reactivate Admissions Cycle</h2>
+<div class="container py-4">
 
-<form method="post" novalidate>
-  {% csrf_token %}
-  {{ form.as_p }}
-  <div class="d-flex gap-2">
-    <button class="btn btn-success" type="submit">
-      <i class="bi bi-play-circle me-1"></i> Start
-    </button>
-    <a class="btn btn-secondary" href="{% url 'admissions:admin_cycle' %}">Cancel</a>
+  <!-- Page header (mirrors your Review header style) -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">{% trans "Start / Reactivate Admissions Cycle" %}</h2>
+      <small class="text-muted">{% trans "Create a new cycle or reactivate an existing one by name." %}</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'admissions:admin_cycle' %}">
+        <i class="bi bi-arrow-left me-1"></i> {% trans "Back to cycles" %}
+      </a>
+    </div>
   </div>
-</form>
 
-<hr class="my-4">
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'secondary' }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
 
-<div class="alert alert-info small mb-0">
-  You can run multiple cycles at the same time. Starting a cycle with an existing name
-  will reactivate/update that specific cycle; starting with a new name creates a parallel one.
+  <div class="row g-3">
+    <!-- Left: Guidance + Live preview (styled like your cards) -->
+    <div class="col-md-4">
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">{% trans "Before you start" %}</div>
+        <div class="card-body small">
+          <ul class="mb-0 ps-3">
+            <li class="mb-2">{% trans "You can run multiple cycles at the same time." %}</li>
+            <li class="mb-2">{% trans "Using an existing name will reactivate/update that cycle." %}</li>
+            <li class="mb-0">{% trans "Applicants can submit only within the start and end dates." %}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card admin-card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">{% trans "Cycle preview" %}</span>
+          <span class="badge rounded-pill bg-info px-3 py-2" id="previewStatus">{% trans "Draft" %}</span>
+        </div>
+        <div class="card-body">
+          <div class="small">
+            <div class="text-muted">{% trans "Name" %}</div>
+            <div id="previewName" class="mb-2">—</div>
+            <div class="text-muted">{% trans "Window" %}</div>
+            <div id="previewWindow">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Form in your “admin-card” style -->
+    <div class="col-md-8">
+      <form method="post" novalidate id="startCycleForm" class="needs-validation">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Meta / Cycle details -->
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">{% trans "Cycle details" %}</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label" for="{{ form.name.id_for_label }}">
+                  {{ form.name.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.name }}
+                {% if form.name.help_text %}<div class="form-text">{{ form.name.help_text }}</div>{% endif %}
+                {% for e in form.name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.start_date.id_for_label }}">
+                  {{ form.start_date.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.start_date }}
+                {% for e in form.start_date.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.end_date.id_for_label }}">
+                  {{ form.end_date.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.end_date }}
+                <div class="form-text">{% trans "End date must be on or after the start date." %}</div>
+                {% for e in form.end_date.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions (match your Review page button look) -->
+        <div class="card admin-card shadow-sm">
+          <div class="card-header fw-semibold">{% trans "Action" %}</div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-success" type="submit">
+                <i class="bi bi-play-circle me-1"></i> {% trans "Start" %}
+              </button>
+              <a class="btn btn-outline-secondary" href="{% url 'admissions:admin_cycle' %}">
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Validation summary (styled to match) -->
+      {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+          <strong>{% trans "Please fix the errors below." %}</strong>
+          <ul class="mb-0 small">
+            {% for field in form.visible_fields %}
+              {% if field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</li>
+              {% endif %}
+            {% endfor %}
+            {% if form.non_field_errors %}
+              {% for err in form.non_field_errors %}
+                <li>{{ err }}</li>
+              {% endfor %}
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
+
+{% block extra_body %}{% endblock %}
+<script>
+  // Keep end_date >= start_date and update the preview like your other pages.
+  (function () {
+    const nameInput  = document.getElementById("{{ form.name.id_for_label }}");
+    const startInput = document.getElementById("{{ form.start_date.id_for_label }}");
+    const endInput   = document.getElementById("{{ form.end_date.id_for_label }}");
+
+    const pvName   = document.getElementById("previewName");
+    const pvWindow = document.getElementById("previewWindow");
+    const pvStatus = document.getElementById("previewStatus");
+
+    function syncMinEnd() {
+      if (startInput && endInput) {
+        endInput.min = startInput.value || "";
+        if (startInput.value && endInput.value && endInput.value < startInput.value) {
+          endInput.value = startInput.value;
+        }
+      }
+      updatePreview();
+    }
+
+    function tidyName() {
+      if (!nameInput) return;
+      nameInput.value = nameInput.value.replace(/\s{2,}/g, " ").trimStart();
+      updatePreview();
+    }
+
+    function updatePreview() {
+      pvName.textContent = nameInput && nameInput.value ? nameInput.value : "—";
+      const s = startInput && startInput.value ? startInput.value : null;
+      const e = endInput && endInput.value ? endInput.value : null;
+
+      if (s && e) {
+        pvWindow.textContent = `${s} → ${e}`;
+        pvStatus.classList.remove("bg-info", "bg-warning", "bg-secondary", "bg-dark");
+        const today = new Date().toISOString().slice(0,10);
+        if (today >= s && today <= e) {
+          pvStatus.textContent = "{{ _('Will be live') }}";
+          pvStatus.classList.add("bg-warning");
+        } else if (today < s) {
+          pvStatus.textContent = "{{ _('Scheduled') }}";
+          pvStatus.classList.add("bg-info");
+        } else {
+          pvStatus.textContent = "{{ _('Past window') }}";
+          pvStatus.classList.add("bg-secondary");
+        }
+      } else {
+        pvWindow.textContent = "—";
+        pvStatus.textContent = "{{ _('Draft') }}";
+        pvStatus.classList.remove("bg-warning", "bg-secondary");
+        pvStatus.classList.add("bg-info");
+      }
+    }
+
+    nameInput && nameInput.addEventListener("input", tidyName);
+    startInput && startInput.addEventListener("change", syncMinEnd);
+    endInput && endInput.addEventListener("change", updatePreview);
+
+    syncMinEnd();
+  })();
+</script>
 {% endblock %}

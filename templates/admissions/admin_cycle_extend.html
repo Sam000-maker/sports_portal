@@ -1,17 +1,169 @@
 {% extends "backoffice/base.html" %}
-{% block title %}Extend Cycle{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Extend Cycle" %}{% endblock %}
 
 {% block content %}
-<h2 class="mb-3">Extend Admissions Cycle</h2>
+<div class="container py-4">
 
-<form method="post" novalidate>
-  {% csrf_token %}
-  {{ form.as_p }}
-  <div class="d-flex gap-2">
-    <button class="btn btn-primary" type="submit">
-      <i class="bi bi-calendar-plus me-1"></i> Extend
-    </button>
-    <a class="btn btn-secondary" href="{% url 'admissions:admin_cycle' %}">Cancel</a>
+  <!-- Page header (consistent with your Review page) -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">{% trans "Extend Admissions Cycle" %}</h2>
+      <small class="text-muted">{% trans "Pick a cycle and set a new end date that is after the current one." %}</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'admissions:admin_cycle' %}">
+        <i class="bi bi-arrow-left me-1"></i> {% trans "Back to cycles" %}
+      </a>
+    </div>
   </div>
-</form>
+
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'secondary' }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <!-- Left: Guidance + Preview -->
+    <div class="col-md-4">
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">{% trans "Before you extend" %}</div>
+        <div class="card-body small">
+          <ul class="mb-0 ps-3">
+            <li class="mb-2">{% trans "Choose the exact cycle you want to extend." %}</li>
+            <li class="mb-2">{% trans "New end date must be after the cycle’s current end date." %}</li>
+            <li class="mb-0">{% trans "Extending does not change the start date or other settings." %}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card admin-card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">{% trans "Extension preview" %}</span>
+          <span class="badge rounded-pill bg-info px-3 py-2" id="pvStatus">{% trans "Draft" %}</span>
+        </div>
+        <div class="card-body">
+          <div class="small">
+            <div class="text-muted">{% trans "Cycle" %}</div>
+            <div id="pvCycle" class="mb-2">—</div>
+            <div class="text-muted">{% trans "New end date" %}</div>
+            <div id="pvEnd">—</div>
+          </div>
+          <div class="small text-muted mt-2">
+            {% trans "The server will validate that the new end date is after the current one." %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Form -->
+    <div class="col-md-8">
+      <form method="post" novalidate id="extendCycleForm" class="needs-validation">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">{% trans "Cycle & date" %}</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-7">
+                <label class="form-label" for="{{ form.cycle.id_for_label }}">{{ form.cycle.label }}</label>
+                {{ form.cycle }}
+                {% if form.cycle.help_text %}<div class="form-text">{{ form.cycle.help_text }}</div>{% endif %}
+                {% for e in form.cycle.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-5">
+                <label class="form-label" for="{{ form.new_end_date.id_for_label }}">{{ form.new_end_date.label }}</label>
+                {{ form.new_end_date }}
+                {% if form.new_end_date.help_text %}<div class="form-text">{{ form.new_end_date.help_text }}</div>{% endif %}
+                {% for e in form.new_end_date.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card admin-card shadow-sm">
+          <div class="card-header fw-semibold">{% trans "Action" %}</div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-primary" type="submit">
+                <i class="bi bi-calendar-plus me-1"></i> {% trans "Extend" %}
+              </button>
+              <a class="btn btn-outline-secondary" href="{% url 'admissions:admin_cycle' %}">
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+          <strong>{% trans "Please fix the errors below." %}</strong>
+          <ul class="mb-0 small">
+            {% for field in form.visible_fields %}
+              {% if field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</li>
+              {% endif %}
+            {% endfor %}
+            {% if form.non_field_errors %}
+              {% for err in form.non_field_errors %}
+                <li>{{ err }}</li>
+              {% endfor %}
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% block extra_body %}{% endblock %}
+<script>
+  // Tiny UX boost: show a preview and prevent obvious date nonsense.
+  (function () {
+    const cycleSelect = document.getElementById("{{ form.cycle.id_for_label }}");
+    const endInput    = document.getElementById("{{ form.new_end_date.id_for_label }}");
+
+    const pvCycle  = document.getElementById("pvCycle");
+    const pvEnd    = document.getElementById("pvEnd");
+    const pvStatus = document.getElementById("pvStatus");
+
+    function updatePreview() {
+      const opt = cycleSelect ? cycleSelect.options[cycleSelect.selectedIndex] : null;
+      pvCycle.textContent = opt ? opt.text : "—";
+      pvEnd.textContent   = endInput && endInput.value ? endInput.value : "—";
+
+      pvStatus.classList.remove("bg-info","bg-warning","bg-secondary");
+      if (pvCycle.textContent !== "—" && pvEnd.textContent !== "—") {
+        pvStatus.textContent = "{{ _('Ready') }}";
+        pvStatus.classList.add("bg-warning");
+      } else {
+        pvStatus.textContent = "{{ _('Draft') }}";
+        pvStatus.classList.add("bg-info");
+      }
+    }
+
+    // Soft guard: new end date cannot be in the past.
+    function enforceMinToday() {
+      if (!endInput) return;
+      const today = new Date().toISOString().slice(0,10);
+      if (!endInput.min || endInput.min < today) {
+        endInput.min = today;
+      }
+    }
+
+    cycleSelect && cycleSelect.addEventListener("change", updatePreview);
+    endInput && endInput.addEventListener("change", updatePreview);
+
+    enforceMinToday();
+    updatePreview();
+  })();
+</script>
 {% endblock %}

@@ -39,6 +39,13 @@
         <span>All Applications</span>
       </a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'admissions:application_create' %}"
+         href="{% url 'admissions:application_create' %}">
+        <i class="bi bi-file-earmark-plus me-2"></i>
+        <span>Apply via Sports Quota</span>
+      </a>
+    </li>
   {% else %}
     <li class="nav-item">
       <a class="nav-link d-flex align-items-center {% active 'admissions:application_create' %}"

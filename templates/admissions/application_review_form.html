@@ -1,0 +1,369 @@
+{% extends "backoffice/base.html" %}
+{% load static %}
+{% block title %}Review · Application #{{ object.pk }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <!-- Page header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">Review Application #{{ object.pk }}</h2>
+      <small class="text-muted">
+        {{ object.full_name|default:"Unnamed applicant" }}
+        {% if object.sport %} · {{ object.sport }}{% endif %}
+        {% if object.cycle %} · {{ object.cycle.name }} ({{ object.cycle.public_id }}){% endif %}
+      </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      {% if object.status == 'approved' %}
+        <span class="badge rounded-pill bg-success px-3 py-2">Approved</span>
+      {% elif object.status == 'rejected' %}
+        <span class="badge rounded-pill bg-danger px-3 py-2">Rejected</span>
+      {% elif object.status == 'under_review' %}
+        <span class="badge rounded-pill bg-info px-3 py-2">Under Review</span>
+      {% else %}
+        <span class="badge rounded-pill bg-secondary px-3 py-2">Submitted</span>
+      {% endif %}
+      {% if object.locked %}
+        <span class="badge rounded-pill bg-warning text-dark px-3 py-2">Locked</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'secondary' }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <!-- Left: Snapshot -->
+    <div class="col-md-3">
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">Applicant</div>
+        <div class="card-body">
+          {% if object.profile_photo %}
+            <img class="img-fluid rounded-soft mb-2 w-100 border-soft" src="{{ object.profile_photo.url }}" alt="Profile photo">
+          {% else %}
+            <div class="ratio ratio-3x4 d-flex align-items-center justify-content-center rounded-soft border-soft mb-2">
+              <span class="text-muted">No photo</span>
+            </div>
+          {% endif %}
+
+          <div class="small">
+            <div class="text-muted">Name</div>
+            <div>{{ object.full_name|default:"—" }}</div>
+          </div>
+
+          <div class="small mt-2">
+            <div class="text-muted">Sport</div>
+            <div>{{ object.sport|default:"—" }}</div>
+          </div>
+
+          <div class="d-grid gap-2 mt-3">
+            <a href="{% url 'admissions:application_detail' object.pk %}" class="btn btn-sm btn-outline-dark">
+              <i class="bi bi-arrow-left me-1"></i> Back to detail
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Edit form + Documents inline -->
+    <div class="col-md-9">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Meta -->
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">Meta</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.cycle.id_for_label }}">Cycle</label>
+                {{ form.cycle }}
+                {% for e in form.cycle.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                <div class="form-text">Choose the admissions cycle.</div>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
+                {{ form.status }}
+                {% for e in form.status.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-3 d-flex align-items-end">
+                <div class="form-check">
+                  {{ form.locked }}
+                  <label class="form-check-label" for="{{ form.locked.id_for_label }}">Locked</label>
+                </div>
+                {% for e in form.locked.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Applicant & Sport -->
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">Applicant &amp; Sport</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.full_name.id_for_label }}">Full name</label>
+                {{ form.full_name }}
+                {% for e in form.full_name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.date_of_birth.id_for_label }}">Date of birth</label>
+                {{ form.date_of_birth }}
+                {% for e in form.date_of_birth.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-3">
+                <label class="form-label" for="{{ form.years_experience.id_for_label }}">Experience (years)</label>
+                {{ form.years_experience }}
+                {% for e in form.years_experience.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.sport.id_for_label }}">Sport</label>
+                {{ form.sport }}
+                {% for e in form.sport.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.level.id_for_label }}">Level</label>
+                {{ form.level }}
+                {% for e in form.level.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.playing_position.id_for_label }}">Position</label>
+                {{ form.playing_position }}
+                {% for e in form.playing_position.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+                {{ form.email }}
+                {% for e in form.email.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.phone.id_for_label }}">Phone</label>
+                {{ form.phone }}
+                {% for e in form.phone.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="{{ form.profile_photo.id_for_label }}">Profile photo</label>
+                {{ form.profile_photo }}
+                {% for e in form.profile_photo.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">Address</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.address_line1.id_for_label }}">Address line 1</label>
+                {{ form.address_line1 }}
+                {% for e in form.address_line1.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.address_line2.id_for_label }}">Address line 2</label>
+                {{ form.address_line2 }}
+                {% for e in form.address_line2.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.city.id_for_label }}">City</label>
+                {{ form.city }}
+                {% for e in form.city.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.state.id_for_label }}">State</label>
+                {{ form.state }}
+                {% for e in form.state.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.postal_code.id_for_label }}">Postal code</label>
+                {{ form.postal_code }}
+                {% for e in form.postal_code.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.country.id_for_label }}">Country</label>
+                {{ form.country }}
+                {% for e in form.country.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Academics & Achievements -->
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">Academics &amp; Achievements</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.previous_institution.id_for_label }}">Previous institution</label>
+              {{ form.previous_institution }}
+              {% for e in form.previous_institution.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.academic_summary.id_for_label }}">Academic summary</label>
+              {{ form.academic_summary }}
+              {% for e in form.academic_summary.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+            <div>
+              <label class="form-label" for="{{ form.achievements.id_for_label }}">Achievements</label>
+              {{ form.achievements }}
+              {% for e in form.achievements.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <!-- Documents (inline formset editor) -->
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <span class="fw-semibold">Documents</span>
+            <button type="button" id="add-doc-row" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-plus-lg me-1"></i> Add document
+            </button>
+          </div>
+          <div class="card-body">
+            {{ doc_formset.management_form }}
+            <div id="doc-rows" class="table-responsive">
+              <table class="table table-hover align-middle mb-0 theme-table">
+                <thead class="theme-thead">
+                  <tr>
+                    <th style="width: 240px;">Type</th>
+                    <th>File</th>
+                    <th style="width: 140px;" class="text-center">Delete</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for df in doc_formset.forms %}
+                    {# include hidden id field for existing rows #}
+                    {% if df.id %}{{ df.id }}{% endif %}
+                    <tr class="doc-form-row">
+                      <td>
+                        {{ df.doc_type }}
+                        {% for e in df.doc_type.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                      </td>
+                      <td>
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                          {{ df.file }}
+                          {% if df.instance.pk and df.instance.file %}
+                            <a class="btn btn-sm btn-outline-secondary"
+                               href="{{ df.instance.file.url }}" target="_blank" rel="noopener">
+                              View current
+                            </a>
+                          {% endif %}
+                        </div>
+                        {% for e in df.file.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+                      </td>
+                      <td class="text-center">
+                        {% if doc_formset.can_delete %}
+                          <div class="form-check d-inline-block">
+                            {{ df.DELETE }}
+                          </div>
+                        {% endif %}
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {# empty-form prototype (hidden) #}
+            <template id="doc-empty-template">
+              {% with ef=doc_formset.empty_form %}
+                {% if ef.id %}{{ ef.id.as_widget }}{% endif %}
+                <tr class="doc-form-row">
+                  <td>
+                    {{ ef.doc_type.as_widget }}
+                  </td>
+                  <td>
+                    {{ ef.file.as_widget }}
+                  </td>
+                  <td class="text-center">
+                    {% if doc_formset.can_delete %}
+                      {{ ef.DELETE.as_widget }}
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endwith %}
+            </template>
+
+            <small class="text-muted d-block mt-2">
+              Accepted types: PDF/JPG/PNG (max 5 MB). To replace a file, choose a new one; to remove a row, tick Delete.
+            </small>
+          </div>
+        </div>
+
+        <!-- Review notes + Actions -->
+        <div class="card admin-card shadow-sm">
+          <div class="card-header fw-semibold">Review &amp; Decision</div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.review_notes.id_for_label }}">Review notes</label>
+              {{ form.review_notes }}
+              {% for e in form.review_notes.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              <div class="form-text">Optional notes appended to the review log.</div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2">
+              <button type="submit" name="action" value="under_review" class="btn btn-warning">
+                <i class="bi bi-eye me-1"></i> Mark Under Review
+              </button>
+              <button type="submit" name="action" value="approve" class="btn btn-success">
+                <i class="bi bi-check2-circle me-1"></i> Approve
+              </button>
+              <button type="submit" name="action" value="reject" class="btn btn-danger">
+                <i class="bi bi-x-octagon me-1"></i> Reject
+              </button>
+              <button type="submit" class="btn btn-outline-primary">
+                <i class="bi bi-save me-1"></i> Save changes
+              </button>
+              <a href="{% url 'admissions:application_detail' object.pk %}" class="btn btn-outline-secondary">
+                Cancel
+              </a>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# -- Minimal JS to add new document rows -- #}
+<script>
+  (function () {
+    const addBtn = document.getElementById('add-doc-row');
+    const rowsTbody = document.querySelector('#doc-rows tbody');
+    const tmpl = document.getElementById('doc-empty-template');
+    const totalForms = document.getElementById('id_docs-TOTAL_FORMS'); // prefix='docs' in view
+
+    if (!addBtn || !tmpl || !rowsTbody || !totalForms) return;
+
+    addBtn.addEventListener('click', function () {
+      const index = parseInt(totalForms.value, 10);
+      const html = tmpl.innerHTML.replace(/__prefix__/g, index);
+      const wrapper = document.createElement('tbody');
+      wrapper.innerHTML = html.trim();
+
+      // Move the <tr> into the main tbody (also ensure hidden id input, if present, is before row)
+      const hiddenId = wrapper.querySelector('input[type="hidden"][name$="-id"]');
+      if (hiddenId) rowsTbody.appendChild(hiddenId);
+      const row = wrapper.querySelector('tr.doc-form-row');
+      rowsTbody.appendChild(row);
+
+      totalForms.value = String(index + 1);
+    });
+  })();
+</script>
+{% endblock %}
