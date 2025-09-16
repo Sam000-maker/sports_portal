@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Player Gallery{% endblock %}
+{% block content %}
+<div class="container my-5">
+  <h2 class="mb-4">Photo Gallery</h2>
+  {% if messages %}
+    {% for msg in messages %}
+      <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
+    {% endfor %}
+  {% endif %}
+  <div class="mb-3">
+    <a href="{% url 'players:gallery_upload' %}" class="btn btn-success">+ Upload New Photo</a>
+  </div>
+
+  {% if photos %}
+    <div class="row">
+      {% for photo in photos %}
+        <div class="col-md-3 mb-4">
+          <div class="card h-100">
+            <img src="{{ photo.image.url }}" class="card-img-top img-fluid" alt="Photo">
+            <div class="card-body text-center">
+              {% if photo.caption %}
+                <p class="card-text">{{ photo.caption }}</p>
+              {% endif %}
+              <p class="text-muted small">
+                Uploaded by {{ photo.uploaded_by.username }} on {{ photo.uploaded_at|date:"Y-m-d" }}
+              </p>
+            </div>
+            <div class="card-footer text-center">
+              <span class="me-3">{{ photo.likes.count }} likes</span>
+              <form method="post" action="{% url 'players:gallery_like' photo.id %}" class="d-inline">
+                {% csrf_token %}
+                {% if photo.id in liked_photos %}
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Unlike</button>
+                {% else %}
+                  <button type="submit" class="btn btn-outline-primary btn-sm">Like</button>
+                {% endif %}
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>No photos uploaded yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

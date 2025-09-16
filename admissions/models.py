@@ -75,6 +75,14 @@ class SportsQuotaApplication(models.Model):
         NATIONAL = "national", "National"
         INTERNATIONAL = "international", "International"
 
+    class Sport(models.TextChoices):
+        FOOTBALL = "football", "Football"
+        BASKETBALL = "basketball", "Basketball"
+        VOLLEYBALL = "volleyball", "Volleyball"
+        BADMINTON = "badminton", "Badminton"
+        CRICKET = "cricket", "Cricket"
+        ATHLETICS = "athletics", "Athletics"
+
     # Applicant linkage
     applicant = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="applications", null=True, blank=True
@@ -82,7 +90,11 @@ class SportsQuotaApplication(models.Model):
     cycle = models.ForeignKey(ApplicationCycle, on_delete=models.PROTECT, related_name="applications")
 
     # Core sports fields
-    sport = models.CharField(max_length=80, db_index=True)
+    sport = models.CharField(
+        max_length=20,
+        choices=Sport.choices,
+        db_index=True,
+    )
     playing_position = models.CharField(max_length=80, blank=True)
     level = models.CharField(max_length=20, choices=Level.choices, db_index=True)
     years_experience = models.PositiveSmallIntegerField(
@@ -149,7 +161,7 @@ class SportsQuotaApplication(models.Model):
         ]
 
     def __str__(self) -> str:
-        return f"{self.full_name or self.applicant} - {self.sport} - {self.cycle}"
+        return f"{self.full_name or self.applicant} - {self.get_sport_display()} - {self.cycle}"
 
     def clean(self):
         # Enforce open window only for new records by regular users

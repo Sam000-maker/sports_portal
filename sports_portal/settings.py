@@ -44,7 +44,7 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "backoffice",
     "tournaments",
-    "players",
+    "players.apps.PlayersConfig",
     "admissions",
     "facilities",
     "analytics",

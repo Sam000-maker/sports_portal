@@ -11,7 +11,6 @@
   <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
     {% csrf_token %}
 
-    <!-- Errors -->
     {% if form.non_field_errors %}
       <div class="alert alert-danger">{{ form.non_field_errors }}</div>
     {% endif %}
@@ -157,7 +156,7 @@
 </div>
 
 <script>
-  // Tiny vanilla "Add row" for formset. Duct tape, but reliable.
+  // Tiny vanilla "Add row" for formset
   (function () {
     const addBtn = document.getElementById('add-row');
     if (!addBtn) return;
@@ -168,7 +167,6 @@
       if (!firstRow) return;
       const clone = firstRow.cloneNode(true);
 
-      // Clear inputs
       clone.querySelectorAll('input, select').forEach(el => {
         if (el.name.endsWith('-DELETE')) {
           el.checked = false;
@@ -180,7 +178,6 @@
         el.id = el.id.replace(`_${currentCount-1}_`, `_${currentCount}_`).replace(`-${currentCount-1}-`, `-${currentCount}-`);
       });
 
-      // Update label "for" attributes
       clone.querySelectorAll('label').forEach(l => {
         if (l.htmlFor) {
           l.htmlFor = l.htmlFor.replace(`_${currentCount-1}_`, `_${currentCount}_`).replace(`-${currentCount-1}-`, `-${currentCount}-`);

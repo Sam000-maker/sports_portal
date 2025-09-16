@@ -5,13 +5,12 @@
 {% block content %}
 <div class="container py-4">
 
-  <!-- Page header -->
   <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
       <h2 class="mb-0 fw-semibold">Review Application #{{ object.pk }}</h2>
       <small class="text-muted">
         {{ object.full_name|default:"Unnamed applicant" }}
-        {% if object.sport %} · {{ object.sport }}{% endif %}
+        {% if object.sport %} · {{ object.sport|capfirst }}{% endif %}
         {% if object.cycle %} · {{ object.cycle.name }} ({{ object.cycle.public_id }}){% endif %}
       </small>
     </div>
@@ -40,7 +39,6 @@
   {% endif %}
 
   <div class="row g-3">
-    <!-- Left: Snapshot -->
     <div class="col-md-3">
       <div class="card admin-card shadow-sm mb-3">
         <div class="card-header fw-semibold">Applicant</div>
@@ -60,7 +58,7 @@
 
           <div class="small mt-2">
             <div class="text-muted">Sport</div>
-            <div>{{ object.sport|default:"—" }}</div>
+            <div>{{ object.get_sport_display|default:"—" }}</div>
           </div>
 
           <div class="d-grid gap-2 mt-3">
@@ -72,7 +70,6 @@
       </div>
     </div>
 
-    <!-- Right: Edit form + Documents inline -->
     <div class="col-md-9">
       <form method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
@@ -81,7 +78,6 @@
           <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
         {% endif %}
 
-        <!-- Meta -->
         <div class="card admin-card shadow-sm mb-3">
           <div class="card-header fw-semibold">Meta</div>
           <div class="card-body">
@@ -108,7 +104,6 @@
           </div>
         </div>
 
-        <!-- Applicant & Sport -->
         <div class="card admin-card shadow-sm mb-3">
           <div class="card-header fw-semibold">Applicant &amp; Sport</div>
           <div class="card-body">
@@ -165,7 +160,6 @@
           </div>
         </div>
 
-        <!-- Address -->
         <div class="card admin-card shadow-sm mb-3">
           <div class="card-header fw-semibold">Address</div>
           <div class="card-body">
@@ -204,7 +198,6 @@
           </div>
         </div>
 
-        <!-- Academics & Achievements -->
         <div class="card admin-card shadow-sm mb-3">
           <div class="card-header fw-semibold">Academics &amp; Achievements</div>
           <div class="card-body">
@@ -226,7 +219,6 @@
           </div>
         </div>
 
-        <!-- Documents (inline formset editor) -->
         <div class="card admin-card shadow-sm mb-3">
           <div class="card-header d-flex align-items-center justify-content-between">
             <span class="fw-semibold">Documents</span>
@@ -247,7 +239,6 @@
                 </thead>
                 <tbody>
                   {% for df in doc_formset.forms %}
-                    {# include hidden id field for existing rows #}
                     {% if df.id %}{{ df.id }}{% endif %}
                     <tr class="doc-form-row">
                       <td>
@@ -279,17 +270,12 @@
               </table>
             </div>
 
-            {# empty-form prototype (hidden) #}
             <template id="doc-empty-template">
               {% with ef=doc_formset.empty_form %}
                 {% if ef.id %}{{ ef.id.as_widget }}{% endif %}
                 <tr class="doc-form-row">
-                  <td>
-                    {{ ef.doc_type.as_widget }}
-                  </td>
-                  <td>
-                    {{ ef.file.as_widget }}
-                  </td>
+                  <td>{{ ef.doc_type.as_widget }}</td>
+                  <td>{{ ef.file.as_widget }}</td>
                   <td class="text-center">
                     {% if doc_formset.can_delete %}
                       {{ ef.DELETE.as_widget }}
@@ -305,7 +291,6 @@
           </div>
         </div>
 
-        <!-- Review notes + Actions -->
         <div class="card admin-card shadow-sm">
           <div class="card-header fw-semibold">Review &amp; Decision</div>
           <div class="card-body">
@@ -329,9 +314,7 @@
               <button type="submit" class="btn btn-outline-primary">
                 <i class="bi bi-save me-1"></i> Save changes
               </button>
-              <a href="{% url 'admissions:application_detail' object.pk %}" class="btn btn-outline-secondary">
-                Cancel
-              </a>
+              <a href="{% url 'admissions:application_detail' object.pk %}" class="btn btn-outline-secondary">Cancel</a>
             </div>
           </div>
         </div>
@@ -340,14 +323,12 @@
   </div>
 </div>
 
-{# -- Minimal JS to add new document rows -- #}
 <script>
   (function () {
     const addBtn = document.getElementById('add-doc-row');
     const rowsTbody = document.querySelector('#doc-rows tbody');
     const tmpl = document.getElementById('doc-empty-template');
     const totalForms = document.getElementById('id_docs-TOTAL_FORMS'); // prefix='docs' in view
-
     if (!addBtn || !tmpl || !rowsTbody || !totalForms) return;
 
     addBtn.addEventListener('click', function () {
@@ -355,13 +336,10 @@
       const html = tmpl.innerHTML.replace(/__prefix__/g, index);
       const wrapper = document.createElement('tbody');
       wrapper.innerHTML = html.trim();
-
-      // Move the <tr> into the main tbody (also ensure hidden id input, if present, is before row)
       const hiddenId = wrapper.querySelector('input[type="hidden"][name$="-id"]');
       if (hiddenId) rowsTbody.appendChild(hiddenId);
       const row = wrapper.querySelector('tr.doc-form-row');
       rowsTbody.appendChild(row);
-
       totalForms.value = String(index + 1);
     });
   })();

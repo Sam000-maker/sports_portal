@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Player Dashboard · Sports Portal{% endblock %}
+
+{% block extra_head %}
+<style>
+  html, body { background: #f8fafc; }
+  .avatar { width: 106px; height: 106px; object-fit: cover; border-radius: 50%; }
+  .avatar-sm { width: 60px; height: 60px; object-fit: cover; border-radius: 50%; }
+  .sticky-col { position: sticky; top: 24px; }
+  .badge-dot { display:inline-block; width:.5rem; height:.5rem; border-radius:50%; background:#16a34a; margin-left:.25rem; vertical-align:middle; }
+  .scoreboard-strip { background: linear-gradient(135deg, #0d6efd 0%, #20c997 100%); color: #fff; border-radius: .75rem; }
+  .scoreboard-tile .label { opacity:.85; font-size:.8rem; text-transform:uppercase; letter-spacing:.06em; }
+  .scoreboard-number { font-size: clamp(1.5rem, 3.2vw, 2rem); font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container" style="margin-top: 24px; max-width: 1400px;">
+  <div class="row g-3">
+
+    <!-- Left Column -->
+    <aside class="col-lg-3">
+      <div class="sticky-col">
+        <!-- Profile card -->
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <h4 class="h6 text-center mb-3">My Profile</h4>
+            <p class="text-center mb-2">
+              {% if profile.photo %}
+                <img src="{{ profile.photo.url }}" class="avatar" alt="Avatar">
+              {% elif request.user.avatar %}
+                <img src="{{ request.user.avatar.url }}" class="avatar" alt="Avatar">
+              {% else %}
+                <img src="{% static 'images/placeholders/avatar.png' %}" class="avatar" alt="Avatar">
+              {% endif %}
+            </p>
+            <div class="text-center fw-semibold">{{ profile.full_name|default:request.user.username }}</div>
+            <div class="text-center small text-muted">{{ request.user.email }}</div>
+            <hr>
+            <div class="d-grid gap-2">
+              <a class="btn btn-outline-primary btn-sm" href="{% url 'players:profile_edit' %}">
+                <i class="bi bi-pencil-square me-1"></i>Edit profile
+              </a>
+              <a class="btn btn-outline-secondary btn-sm" href="{% url 'players:gallery_upload' %}">
+                <i class="bi bi-cloud-upload me-1"></i>Upload photo
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Invites -->
+        {% if pending_invites %}
+        <div class="card shadow-sm mt-3">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <h6 class="mb-0">Team invites</h6>
+              <span class="badge bg-primary">{{ pending_invites|length }}</span>
+            </div>
+            <ul class="list-group list-group-flush">
+              {% for inv in pending_invites %}
+              <li class="list-group-item d-flex align-items-center justify-content-between">
+                <span class="small">{{ inv.team.name }} · {{ inv.team.sport.name }}</span>
+                <form method="post" action="{% url 'players:team_accept' inv.team.id %}">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-success">Join</button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Interests (from view) -->
+        <div class="card shadow-sm mt-3 d-none d-md-block">
+          <div class="card-body">
+            <p class="mb-2 fw-semibold">Interests</p>
+            <div class="d-flex flex-wrap gap-2">
+              {% for tag in interests %}
+                <span class="badge text-bg-secondary">{{ tag }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Middle Column -->
+    <section class="col-lg-7">
+      <!-- Scoreboard -->
+      <div class="scoreboard-strip p-3 p-lg-4 shadow-sm mb-3">
+        <div class="row g-3 g-lg-4 text-center">
+          <div class="col-6 col-lg-3">
+            <div class="scoreboard-tile">
+              <div class="label">Registered athletes</div>
+              <div class="scoreboard-number">{{ stats.athletes|default:0 }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="scoreboard-tile">
+              <div class="label">Teams</div>
+              <div class="scoreboard-number">{{ stats.teams|default:0 }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="scoreboard-tile">
+              <div class="label">Matches scheduled</div>
+              <div class="scoreboard-number">{{ stats.matches|default:0 }}</div>
+            </div>
+          </div>
+          <div class="col-6 col-lg-3">
+            <div class="scoreboard-tile">
+              <div class="label">Venues</div>
+              <div class="scoreboard-number">{{ stats.venues|default:0 }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teams you’re in -->
+      <div class="card shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="mb-0">My teams</h5>
+            <a href="{% url 'players:team_create' %}" class="btn btn-sm btn-primary">
+              <i class="bi bi-people me-1"></i>Create team
+            </a>
+          </div>
+          {% if teams %}
+            <div class="table-responsive">
+              <table class="table align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>Name</th><th>Sport</th><th>Members</th><th class="text-end">Open</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for t in teams %}
+                  <tr>
+                    <td>{{ t.name }}</td>
+                    <td>{{ t.sport.name }}</td>
+                    <td>{{ t.memberships.all|length }}</td>
+                    <td class="text-end">
+                      <a href="{% url 'players:team_detail' t.id %}" class="btn btn-sm btn-outline-primary">Details</a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-muted small">You’re not in any teams yet.</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Gallery feed -->
+      <div class="card shadow-sm mt-3">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h5 class="mb-0">Latest photos</h5>
+            <a href="{% url 'players:gallery_list' %}" class="small text-decoration-none">See all</a>
+          </div>
+
+          {% if photos %}
+          <div class="row g-2">
+            {% for p in photos %}
+              <div class="col-6 col-md-4">
+                <div class="card h-100">
+                  <img src="{{ p.image.url }}" class="card-img-top" alt="">
+                  <div class="card-body p-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <small class="text-muted">{{ p.uploaded_by.username }}</small>
+                      <form method="post" action="{% url 'players:gallery_like' p.id %}">
+                        {% csrf_token %}
+                        {% if p.id in liked_photos %}
+                          <button class="btn btn-sm btn-primary"><i class="bi bi-hand-thumbs-up-fill me-1"></i>{{ p.like_count }}</button>
+                        {% else %}
+                          <button class="btn btn-sm btn-outline-primary"><i class="bi bi-hand-thumbs-up me-1"></i>{{ p.like_count }}</button>
+                        {% endif %}
+                      </form>
+                    </div>
+                    {% if p.caption %}<div class="small mt-1">{{ p.caption }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          {% else %}
+            <div class="text-muted small">No photos yet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Column -->
+    <aside class="col-lg-2">
+      <div class="sticky-col">
+        <div class="card shadow-sm text-center">
+          <div class="card-body">
+            <p class="text-muted mb-2">Upcoming Event</p>
+            <img src="{% static 'images/placeholders/fixture.jpg' %}" class="img-fluid rounded mb-2" alt="">
+            <p class="fw-semibold mb-1">Holiday <span class="badge-dot"></span></p>
+            <p class="mb-2 text-muted small">Friday 15:00</p>
+            <a class="btn btn-outline-primary btn-sm w-100" href="#"><i class="bi bi-info-circle me-1"></i>Info</a>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</main>
+{% endblock %}

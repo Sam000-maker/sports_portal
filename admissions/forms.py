@@ -123,8 +123,7 @@ class SportsQuotaApplicationForm(forms.ModelForm):
         ]
         widgets = {
             "cycle": forms.Select(),
-            # sport is free-text unless you provide choices on the model
-            "sport": forms.TextInput(attrs={"placeholder": _("e.g. Football / Basketball / Badminton")}),
+            "sport": forms.Select(),  # now a dropdown via model choices
             "level": forms.Select(),
             "years_experience": forms.NumberInput(attrs={"min": 0, "max": 40, "step": 1, "inputmode": "numeric"}),
             "playing_position": forms.TextInput(attrs={"placeholder": _("e.g. Striker / Point Guard")}),
@@ -146,12 +145,12 @@ class SportsQuotaApplicationForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name in ("cycle", "level"):
+        for name in ("cycle", "level", "sport"):
             _add_bs(self.fields[name], kind="select")
         for name, field in self.fields.items():
             if name == "consent":
                 _add_bs(field, kind="checkbox")
-            elif name not in ("cycle", "level"):
+            elif name not in ("cycle", "level", "sport"):
                 _add_bs(field)
 
     def clean(self):
@@ -209,7 +208,7 @@ class SportsQuotaAdminForm(forms.ModelForm):
         ]
         widgets = {
             "cycle": forms.Select(),
-            "sport": forms.TextInput(attrs={"placeholder": _("e.g. Football / Basketball / Badminton")}),
+            "sport": forms.Select(),  # dropdown for admin too
             "level": forms.Select(),
             "years_experience": forms.NumberInput(attrs={"min": 0, "max": 40, "step": 1, "inputmode": "numeric"}),
             "playing_position": forms.TextInput(attrs={"placeholder": _("e.g. Striker / Point Guard")}),
@@ -237,13 +236,13 @@ class SportsQuotaAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        for name in ("cycle", "level", "status"):
+        for name in ("cycle", "level", "status", "sport"):
             _add_bs(self.fields[name], kind="select")
         _add_bs(self.fields["locked"], kind="checkbox")
         _add_bs(self.fields["review_notes"])
         # Everything else gets the default control class
         for name, field in self.fields.items():
-            if name in {"cycle", "level", "status", "locked", "review_notes"}:
+            if name in {"cycle", "level", "status", "sport", "locked", "review_notes"}:
                 continue
             _add_bs(field)
 
