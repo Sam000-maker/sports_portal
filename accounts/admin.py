@@ -1,8 +1,12 @@
+# accounts/admin.py
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
+
+from .models import Sport, PendingPlayerRequest, RoleChangeLog
 
 User = get_user_model()
 
@@ -39,12 +43,14 @@ class UserAdmin(DjangoUserAdmin):
         (None, {"fields": ("username", "password")}),
         (_("Personal info"), {"fields": ("first_name", "last_name", "email", "phone", "avatar")}),
         (_("Role"), {"fields": ("role",)}),
+        (_("Sports"), {"fields": ("sports",)}),
         (_("Permissions"), {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     )
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("username", "password1", "password2", "email")}),
     )
+    filter_horizontal = ("groups", "user_permissions", "sports")
 
     def get_readonly_fields(self, request, obj=None):
         ro = list(super().get_readonly_fields(request, obj))
@@ -84,3 +90,51 @@ class UserAdmin(DjangoUserAdmin):
                 return
 
         return super().save_model(request, obj, form, change)
+
+
+@admin.register(Sport)
+class SportAdmin(admin.ModelAdmin):
+    search_fields = ["name"]
+    list_display = ["name"]
+
+
+@admin.register(PendingPlayerRequest)
+class PendingPlayerRequestAdmin(admin.ModelAdmin):
+    list_display = ["user", "status", "submitted_at", "reviewed_by", "reviewed_at"]
+    list_filter = ["status", "submitted_at"]
+    search_fields = ["user__username", "user__email", "review_note"]
+    filter_horizontal = ["sports"]
+
+    actions = ["approve_requests", "reject_requests"]
+
+    def approve_requests(self, request, queryset):
+        qs = queryset.filter(status=PendingPlayerRequest.Status.PENDING).select_related("user").prefetch_related("sports")
+        count = 0
+        for req in qs:
+            u = req.user
+            old_role = u.role
+            u.role = User.Roles.STUDENT
+            u.save(update_fields=["role"])
+            u.sports.set(req.sports.all())
+
+            req.status = PendingPlayerRequest.Status.APPROVED
+            req.reviewed_by = request.user
+            req.reviewed_at = timezone.now()
+            req.review_note = "Approved via admin action"
+            req.save()
+
+            RoleChangeLog.objects.create(
+                target=u, changed_by=request.user, old_role=old_role, new_role=u.role, reason="Approved player request"
+            )
+            count += 1
+        self.message_user(request, f"Approved {count} request(s).")
+
+    def reject_requests(self, request, queryset):
+        qs = queryset.filter(status=PendingPlayerRequest.Status.PENDING)
+        count = qs.update(
+            status=PendingPlayerRequest.Status.REJECTED,
+            reviewed_by=request.user,
+            reviewed_at=timezone.now(),
+            review_note="Rejected via admin action",
+        )
+        self.message_user(request, f"Rejected {count} request(s).")

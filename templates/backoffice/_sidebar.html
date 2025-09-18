@@ -10,21 +10,32 @@
     </a>
   </li>
 
-  <!-- Users -->
+  <!-- Users (lives in accounts namespace) -->
   <li class="nav-item">
-    <a class="nav-link d-flex align-items-center {% active 'backoffice:users_list' %}"
-       href="{% url 'backoffice:users_list' %}">
+    <a class="nav-link d-flex align-items-center {% active 'accounts:users_list' %}"
+       href="{% url 'accounts:users_list' %}">
       <i class="bi bi-people me-2"></i>
       <span>Users</span>
     </a>
   </li>
+
+  <!-- Player Requests (admins + coaches only) -->
+  {% if request.user.is_superuser or request.user.role == 'admin' or request.user.role == 'coach' %}
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'accounts:player_requests_list' %}"
+       href="{% url 'accounts:player_requests_list' %}">
+      <i class="bi bi-person-check me-2"></i>
+      <span>Player Requests</span>
+    </a>
+  </li>
+  {% endif %}
 
   <!-- Admissions -->
   <li class="nav-item mt-3">
     <span class="text-uppercase small text-muted ps-2">Admissions</span>
   </li>
 
-  {% if request.user.is_staff %}
+  {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'staff' %}
     <li class="nav-item">
       <a class="nav-link d-flex align-items-center {% active 'admissions:admin_cycle' %}"
          href="{% url 'admissions:admin_cycle' %}">

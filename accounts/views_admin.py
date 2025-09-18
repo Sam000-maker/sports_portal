@@ -1,83 +1,231 @@
 # accounts/views_admin.py
 from django.contrib import messages
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db import models
-from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
+from django.db.models import Q, Count
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+from django.views.decorators.http import require_http_methods
 from django.utils.http import url_has_allowed_host_and_scheme
 
+
+from .models import PendingPlayerRequest, RoleChangeLog
+from .permissions import admin_or_coach_required
 from .forms import AdminRoleUpdateForm
-from .models import RoleChangeLog
-from .permissions import admin_required
 
 User = get_user_model()
 
-
-def _safe_redirect(request, fallback_name="accounts:users_list"):
-    next_url = request.POST.get("next") or request.GET.get("next")
-    if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
-        return redirect(next_url)
-    try:
-        return redirect(reverse(fallback_name))
-    except Exception:
-        return redirect("/")
-
-
-@login_required
-@admin_required()
+# ---------- Users list (admin/coach) ----------
+@admin_or_coach_required
 def users_list(request):
+    # Filters
     q = (request.GET.get("q") or "").strip()
-    qs = User.objects.all().order_by("username")
+    role = request.GET.get("role") or ""
+    staff = request.GET.get("staff") or ""   # '1' | '0' | ''
+    active = request.GET.get("active") or "" # '1' | '0' | ''
+    order = request.GET.get("order") or "username"
+
+    allowed_orders = {"username", "-last_login", "last_login"}
+    if order not in allowed_orders:
+        order = "username"
+
+    # Base queryset
+    qs = User.objects.all()
+
     if q:
         qs = qs.filter(
-            models.Q(username__icontains=q)
-            | models.Q(email__icontains=q)
-            | models.Q(first_name__icontains=q)
-            | models.Q(last_name__icontains=q)
+            Q(username__icontains=q)
+            | Q(email__icontains=q)
+            | Q(first_name__icontains=q)
+            | Q(last_name__icontains=q)
         )
-    paginator = Paginator(qs, 25)
-    page = paginator.get_page(request.GET.get("page"))
-    return render(request, "accounts/users_list.html", {"page": page, "q": q})
+    if role:
+        qs = qs.filter(role=role)
+    if staff in {"1", "0"}:
+        qs = qs.filter(is_staff=(staff == "1"))
+    if active in {"1", "0"}:
+        qs = qs.filter(is_active=(active == "1"))
+
+    # Ordering
+    if order == "username":
+        qs = qs.order_by("username")
+    else:
+        qs = qs.order_by(order, "username")  # stable secondary key
+
+    # KPI on filtered set
+    filtered = qs
+    kpi = {
+        "total": filtered.count(),
+        "active": filtered.filter(is_active=True).count(),
+        "staff": filtered.filter(is_staff=True).count(),
+        "superusers": filtered.filter(is_superuser=True).count(),
+    }
+
+    # Role summary on filtered set
+    roles_summary = (
+        filtered.values("role")
+        .annotate(total=Count("id"))
+        .order_by("role")
+    )
+
+    # Choices for inline role dropdown
+    roles_choices = list(User.Roles.choices)
+
+    # Pagination
+    page = Paginator(qs, 25).get_page(request.GET.get("page"))
+
+    # Echo filters for template
+    filters = {"q": q, "role": role, "staff": staff, "active": active, "order": order}
+
+    return render(
+        request,
+        "accounts/admin_users_list.html",
+        {
+            "page": page,
+            "kpi": kpi,
+            "filters": filters,
+            "roles_choices": roles_choices,
+            "roles_summary": roles_summary,
+        },
+    )
 
 
-@login_required
-@admin_required()
-@transaction.atomic
+# ---------- Change a user's role (admin/coach) ----------
+@admin_or_coach_required
+@require_http_methods(["GET", "POST"])
 def change_user_role(request, user_id):
     target = get_object_or_404(User, pk=user_id)
-
-    def _count_superusers():
-        return User.objects.filter(is_superuser=True, is_active=True).count()
 
     if request.method == "POST":
         form = AdminRoleUpdateForm(target_user=target, acting_user=request.user, data=request.POST)
         if form.is_valid():
-            old_role = target.role
             new_role = form.cleaned_data["role"]
+            reason = form.cleaned_data.get("reason", "")
 
-            if target.is_superuser and new_role != User.Roles.ADMIN and _count_superusers() == 1:
-                messages.error(request, "You cannot change the role of the last superuser.")
-                return _safe_redirect(request)
+            with transaction.atomic():
+                old_role = target.role
+                target.role = new_role
+                target.save(update_fields=["role"])
+                RoleChangeLog.objects.create(
+                    target=target,
+                    changed_by=request.user,
+                    old_role=old_role,
+                    new_role=new_role,
+                    reason=reason or "Role changed via backoffice",
+                )
 
-            target.role = new_role
-            target.save(update_fields=["role"])
+            # Respect ?next so the inline dropdown returns to the same filter/page
+            next_url = request.POST.get("next")
+            if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+                return redirect(next_url)
 
-            RoleChangeLog.objects.create(
-                target=target,
-                changed_by=request.user,
-                old_role=old_role,
-                new_role=new_role,
-                reason=form.cleaned_data.get("reason", "Inline change"),
-            )
-
-            messages.success(request, f"Role updated: {target.username} → {target.get_role_display()}.")
-            return _safe_redirect(request, fallback_name="accounts:users_list")
-        else:
-            messages.error(request, "; ".join([" ".join(err_list) for err_list in form.errors.values()]) or "Invalid input.")
-            return _safe_redirect(request)
+            messages.success(request, f"Updated {target.username} to {new_role}.")
+            return redirect("accounts:users_list")
     else:
-        form = AdminRoleUpdateForm(target_user=target, acting_user=request.user, initial={"role": target.role})
-        return render(request, "accounts/change_user_role.html", {"form": form, "target": target})
+        form = AdminRoleUpdateForm(target_user=target, acting_user=request.user)
+
+    return render(request, "accounts/change_user_role.html", {"form": form, "target": target})
+
+
+# ---------- Player requests review (admin/coach) ----------
+@admin_or_coach_required
+def player_requests_list(request):
+    # Filters
+    q = (request.GET.get("q") or "").strip()
+    status = (request.GET.get("status") or "pending").lower()
+    order = request.GET.get("order") or "-submitted_at"
+    allowed_orders = {"-submitted_at", "submitted_at", "-id", "id"}
+    if order not in allowed_orders:
+        order = "-submitted_at"
+
+    # Base queryset for search-only (for KPI/summary across all statuses)
+    base = PendingPlayerRequest.objects.select_related("user").prefetch_related("sports")
+    if q:
+        base = base.filter(Q(user__username__icontains=q) | Q(user__email__icontains=q))
+
+    # Summary by status on the search-filtered set
+    summary = dict(
+        (row["status"], row["total"])
+        for row in base.values("status").annotate(total=Count("id"))
+    )
+    # Ensure keys exist
+    for s in ("pending", "approved", "rejected"):
+        summary.setdefault(s, 0)
+
+    # KPI on the search-filtered set
+    kpi = {
+        "total": base.count(),
+        "pending": summary["pending"],
+        "approved": summary["approved"],
+        "rejected": summary["rejected"],
+    }
+
+    # Apply status + ordering for the page list
+    qs = base
+    if status in {"pending", "approved", "rejected"}:
+        qs = qs.filter(status=status)
+    qs = qs.order_by(order, "-id")  # stable secondary key
+
+    # Pagination
+    page = Paginator(qs, 25).get_page(request.GET.get("page"))
+
+    filters = {"q": q, "status": status, "order": order}
+
+    return render(
+        request,
+        "accounts/player_requests_list.html",
+        {
+            "page": page,
+            "kpi": kpi,
+            "filters": filters,
+            "status_summary": [
+                {"status": "pending", "total": summary["pending"]},
+                {"status": "approved", "total": summary["approved"]},
+                {"status": "rejected", "total": summary["rejected"]},
+            ],
+            # legacy var name some snippets still reference
+            "filter_status": status,
+        },
+    )
+
+@admin_or_coach_required
+@require_http_methods(["POST"])
+def review_player_request(request, pk, action):
+    req = get_object_or_404(PendingPlayerRequest, pk=pk)
+
+    if req.status != PendingPlayerRequest.Status.PENDING:
+        messages.info(request, "Request already reviewed.")
+        return redirect("accounts:player_requests_list")
+
+    if action not in {"approve", "reject"}:
+        messages.error(request, "Unknown action.")
+        return redirect("accounts:player_requests_list")
+
+    with transaction.atomic():
+        req.reviewed_by = request.user
+        req.reviewed_at = timezone.now()
+
+        if action == "reject":
+            req.status = PendingPlayerRequest.Status.REJECTED
+            req.review_note = "Rejected"
+            req.save()
+            messages.info(request, "Request rejected.")
+            return redirect("accounts:player_requests_list")
+
+        # Approve
+        req.status = PendingPlayerRequest.Status.APPROVED
+        req.review_note = "Approved"
+        req.save()
+
+        u = req.user
+        old_role = u.role
+        u.role = User.Roles.STUDENT
+        u.save(update_fields=["role"])
+        u.sports.set(req.sports.all())
+
+        RoleChangeLog.objects.create(
+            target=u, changed_by=request.user, old_role=old_role, new_role=u.role, reason="Approved player request"
+        )
+        messages.success(request, f"Approved {u.username} and promoted to Student.")
+        return redirect("accounts:player_requests_list")

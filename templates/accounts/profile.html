@@ -1,10 +1,220 @@
-{% extends "backoffice/base.html" %}
-{% block title %}Profile{% endblock %}
+{% extends "base.html" %}
+{% load static %}
+{% block title %}My Profile{% endblock %}
+
 {% block content %}
-<h1>My Profile</h1>
-<form method="post" enctype="multipart/form-data">
-  {% csrf_token %}
-  {{ form.as_p }}
-  <button type="submit">Save</button>
-</form>
+<div class="container py-4">
+  <div class="row g-4">
+    <!-- Left: Avatar + Profile form -->
+    <div class="col-12 col-lg-7">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_profile">
+
+        <div class="card shadow-sm mb-4">
+          <div class="card-body text-center">
+            <div class="mb-3">
+              {% if user.avatar %}
+                <img
+                  id="avatarPreview"
+                  src="{{ user.avatar.url }}"
+                  alt="Avatar"
+                  width="160" height="160"
+                  class="rounded-circle img-fluid"
+                  style="width:160px;height:160px;object-fit:cover;"
+                  decoding="async"
+                  onerror="this.onerror=null;this.src='{% static 'img/avatar-placeholder.png' %}'"
+                >
+              {% else %}
+                <img
+                  id="avatarPreview"
+                  src="{% static 'img/avatar-placeholder.png' %}"
+                  alt="Avatar"
+                  width="160" height="160"
+                  class="rounded-circle img-fluid"
+                  style="width:160px;aspect-ratio:1/1;object-fit:cover;"
+                  decoding="async"
+                >
+              {% endif %}
+            </div>
+
+            <div class="mb-3 text-start">
+              <label class="form-label" for="id_avatar">Profile photo</label>
+              {{ form.avatar }}
+              {% if form.avatar.errors %}
+                <div class="invalid-feedback d-block">{{ form.avatar.errors|striptags }}</div>
+              {% endif %}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+              <p class="text-muted mb-0 small">JPG or PNG.</p>
+              <button type="submit"
+                      name="action" value="remove_avatar"
+                      class="btn btn-outline-danger btn-sm"
+                      formnovalidate
+                      onclick="return confirm('Remove your profile photo?');">
+                Remove photo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card shadow-sm">
+          <div class="card-header bg-white">
+            <h5 class="mb-0">Edit Profile</h5>
+          </div>
+          <div class="card-body">
+            {% if form.non_field_errors %}
+              <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="id_first_name">First name</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.first_name.errors|striptags }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="id_last_name">Last name</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                  <div class="invalid-feedback d-block">{{ form.last_name.errors|striptags }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="id_email">Email</label>
+                {{ form.email }}
+                <div class="form-text">Used for notifications and password resets.</div>
+                {% if form.email.errors %}
+                  <div class="invalid-feedback d-block">{{ form.email.errors|striptags }}</div>
+                {% endif %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="id_phone">Phone</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}
+                  <div class="invalid-feedback d-block">{{ form.phone.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <hr class="my-4">
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check2-circle me-1"></i> Save changes
+              </button>
+              <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary">Cancel</a>
+              <a href="{% url 'accounts:password_reset' %}" class="btn btn-outline-secondary ms-auto">
+                <i class="bi bi-key me-1"></i> Reset password
+              </a>
+            </div>
+          </div>
+          <div class="card-footer bg-light small text-muted">
+            Username: <code>{{ user.username }}</code> · Role: <code>{{ user.role|default:"guest" }}</code>
+          </div>
+        </div>
+      </form>
+
+      <!-- Danger zone: separate form, not nested -->
+      <div class="card border-danger mt-4">
+        <div class="card-body">
+          <h6 class="text-danger">Danger zone</h6>
+          <p class="small text-muted mb-3">Deleting your account is permanent.</p>
+          <form method="post" action="{% url 'accounts:delete_account' %}">
+            {% csrf_token %}
+            <button type="submit"
+                    class="btn btn-outline-danger btn-sm"
+                    onclick="return confirm('Delete your account permanently?');">
+              Delete account
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Become a player request -->
+    <div class="col-12 col-lg-5">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white">
+          <h5 class="mb-0">Become a Player</h5>
+        </div>
+        <div class="card-body">
+          {% if request_form.non_field_errors %}
+            <div class="alert alert-danger">{{ request_form.non_field_errors }}</div>
+          {% endif %}
+
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <input type="hidden" name="action" value="become_player">
+            <div class="mb-3">
+              <label class="form-label" for="{{ request_form.sport.id_for_label }}">Select your sport</label>
+              {{ request_form.sport }}
+              {% if request_form.sport.errors %}
+                <div class="invalid-feedback d-block">{{ request_form.sport.errors|striptags }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ request_form.bio.id_for_label }}">Bio (optional)</label>
+              {{ request_form.bio }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ request_form.achievements.id_for_label }}">Achievements (optional)</label>
+              {{ request_form.achievements }}
+            </div>
+
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-flag me-1"></i> Request to become a player
+            </button>
+          </form>
+        </div>
+
+        <div class="card-footer bg-light">
+          <div class="small text-muted">Your recent requests:</div>
+          <ul class="small mt-2 mb-0">
+            {% for r in my_requests %}
+              <li>#{{ r.id }} • {{ r.submitted_at|date:"Y-m-d H:i" }} • <strong>{{ r.status|title }}</strong></li>
+            {% empty %}
+              <li class="text-muted">No requests yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      {% if user_sports %}
+      <div class="card mt-4">
+        <div class="card-header bg-white"><h6 class="mb-0">Your approved sports</h6></div>
+        <div class="card-body">
+          {% for s in user_sports %}
+            <span class="badge bg-secondary me-1 mb-1">{{ s.name }}</span>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const fileInput = document.getElementById("id_avatar");
+  const preview = document.getElementById("avatarPreview");
+  if (!fileInput || !preview) return;
+  fileInput.addEventListener("change", function () {
+    const [file] = fileInput.files || [];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    preview.src = url;
+    preview.onload = () => URL.revokeObjectURL(url);
+  });
+});
+</script>
 {% endblock %}

@@ -1,0 +1,273 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Users · Backoffice{% endblock %}
+
+{% block content %}
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h1 class="h4 mb-0 fw-semibold">Users</h1>
+  </div>
+
+  <!-- KPI row -->
+  <div class="row g-3 mb-3">
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Total (filtered)</div>
+              <div class="h3 mb-0 fw-semibold">{{ kpi.total }}</div>
+            </div>
+            <div class="opacity-75"><i class="bi bi-people h2 m-0"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Active</div>
+              <div class="h3 mb-0 fw-semibold">{{ kpi.active }}</div>
+            </div>
+            <div class="opacity-75"><i class="bi bi-check2-circle h2 m-0"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Staff</div>
+              <div class="h3 mb-0 fw-semibold">{{ kpi.staff }}</div>
+            </div>
+            <div class="opacity-75"><i class="bi bi-shield-check h2 m-0"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-sm-6 col-lg-3">
+      <div class="card admin-card shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <div class="text-muted small">Superusers</div>
+              <div class="h3 mb-0 fw-semibold">{{ kpi.superusers }}</div>
+            </div>
+            <div class="opacity-75"><i class="bi bi-stars h2 m-0"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="row g-2 align-items-end mb-3" role="search" aria-label="User filters">
+    <div class="col-12 col-lg-4">
+      <label for="users-q-lg" class="form-label small text-muted mb-1">Search</label>
+      <div class="input-group input-group-sm">
+        <input id="users-q-lg"
+               type="search"
+               name="q"
+               value="{{ filters.q }}"
+               class="form-control form-control-sm theme-input"
+               placeholder="username / email / name">
+      </div>
+    </div>
+
+    <div class="col-6 col-lg-2">
+      <label for="users-role" class="form-label small text-muted mb-1">Role</label>
+      <select id="users-role" name="role" class="form-select form-select-sm theme-input">
+        <option value="">Any</option>
+        {% for value,label in roles_choices %}
+          <option value="{{ value }}" {% if filters.role == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-6 col-lg-2">
+      <label for="users-staff" class="form-label small text-muted mb-1">Staff</label>
+      <select id="users-staff" name="staff" class="form-select form-select-sm theme-input">
+        <option value="">Any</option>
+        <option value="1" {% if filters.staff == '1' %}selected{% endif %}>Yes</option>
+        <option value="0" {% if filters.staff == '0' %}selected{% endif %}>No</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-lg-2">
+      <label for="users-active" class="form-label small text-muted mb-1">Active</label>
+      <select id="users-active" name="active" class="form-select form-select-sm theme-input">
+        <option value="">Any</option>
+        <option value="1" {% if filters.active == '1' %}selected{% endif %}>Active</option>
+        <option value="0" {% if filters.active == '0' %}selected{% endif %}>Inactive</option>
+      </select>
+    </div>
+
+    <div class="col-6 col-lg-2">
+      <label for="users-order" class="form-label small text-muted mb-1">Order</label>
+      <select id="users-order" name="order" class="form-select form-select-sm theme-input">
+        <option value="username" {% if filters.order == 'username' %}selected{% endif %}>Username A→Z</option>
+        <option value="-last_login" {% if filters.order == '-last_login' %}selected{% endif %}>Last login (newest)</option>
+        <option value="last_login" {% if filters.order == 'last_login' %}selected{% endif %}>Last login (oldest)</option>
+      </select>
+    </div>
+
+    <div class="col-12 col-lg-12 d-flex gap-2 justify-content-end">
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-funnel me-1"></i> Apply</button>
+      <a class="btn btn-outline-secondary btn-sm" href="?"><i class="bi bi-x-circle me-1"></i> Reset</a>
+    </div>
+  </form>
+
+  {% if roles_summary %}
+    <div class="mb-3">
+      <div class="small text-muted mb-1">By role (filtered):</div>
+      <div class="d-flex flex-wrap gap-2">
+        {% for row in roles_summary %}
+          <a class="badge rounded-pill
+             {% if row.role == 'admin' %}bg-primary
+             {% elif row.role == 'staff' %}bg-secondary
+             {% elif row.role == 'coach' %}bg-info text-dark
+             {% elif row.role == 'student' %}bg-success
+             {% elif row.role == 'guest' %}bg-warning text-dark
+             {% else %}bg-dark{% endif %}"
+             href="?q={{ filters.q }}&role={{ row.role }}&staff={{ filters.staff }}&active={{ filters.active }}&order={{ filters.order }}">
+            {{ row.role|capfirst }}: {{ row.total }}
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Table -->
+  <div class="card admin-card shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 theme-table">
+          <thead class="theme-thead">
+            <tr>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Staff</th>
+              <th>Active</th>
+              <th>Last login</th>
+              <th style="width: 16rem;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in page.object_list %}
+              <tr>
+                <td class="fw-semibold">
+                  {{ u.username }}
+                  {% if u.is_superuser %}
+                    <i class="bi bi-stars text-primary" title="Superuser"></i>
+                  {% endif %}
+                </td>
+                <td class="text-muted text-truncate" style="max-width: 220px;">{{ u.email|default:"—" }}</td>
+
+                <td>
+                  {% if u.role == 'admin' %}
+                    <span class="badge bg-primary">Admin</span>
+                  {% elif u.role == 'staff' %}
+                    <span class="badge bg-secondary">Staff</span>
+                  {% elif u.role == 'coach' %}
+                    <span class="badge bg-info text-dark">Coach</span>
+                  {% elif u.role == 'student' %}
+                    <span class="badge bg-success">Student</span>
+                  {% elif u.role == 'guest' %}
+                    <span class="badge bg-warning text-dark">Guest</span>
+                  {% else %}
+                    <span class="badge bg-dark">{{ u.role|capfirst|default:"—" }}</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if u.is_staff %}
+                    <span class="badge bg-success">Yes</span>
+                  {% else %}
+                    <span class="badge bg-danger">No</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if u.is_active %}
+                    <span class="badge bg-success">Active</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Inactive</span>
+                  {% endif %}
+                </td>
+
+                <td class="text-muted small">{{ u.last_login|default:"—" }}</td>
+
+                <td>
+                  <form method="post"
+                        action="{% url 'accounts:change_user_role' u.id %}"
+                        class="d-inline"
+                        onsubmit="return confirm('Change role for {{ u.username }}?')">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <input type="hidden" name="reason" value="Inline change from Users list">
+                    <div class="input-group input-group-sm">
+                      <select id="role-{{ u.id }}"
+                              name="role"
+                              class="form-select form-select-sm theme-input"
+                              style="min-width: 12rem"
+                              onchange="this.form.submit()">
+                        {% for value,label in roles_choices %}
+                          <option value="{{ value }}" {% if u.role == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                  </form>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="7" class="text-center text-muted py-5">
+                  <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                  <em>No users found.</em>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <nav aria-label="User pagination" class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if page.has_previous %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?q={{ filters.q }}&role={{ filters.role }}&staff={{ filters.staff }}&active={{ filters.active }}&order={{ filters.order }}&page={{ page.previous_page_number }}">
+            &laquo; Prev
+          </a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">&laquo; Prev</span></li>
+      {% endif %}
+
+      <li class="page-item disabled">
+        <span class="page-link">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+      </li>
+
+      {% if page.has_next %}
+        <li class="page-item">
+          <a class="page-link"
+             href="?q={{ filters.q }}&role={{ filters.role }}&staff={{ filters.staff }}&active={{ filters.active }}&order={{ filters.order }}&page={{ page.next_page_number }}">
+            Next &raquo;
+          </a>
+        </li>
+      {% else %}
+        <li class="page-item disabled"><span class="page-link">Next &raquo;</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+{% endblock %}

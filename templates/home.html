@@ -26,37 +26,43 @@
     color: #fff;
     border-radius: .75rem;
   }
-  .scoreboard-tile { position: relative; }
-  .scoreboard-tile .label { opacity: .85; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
+  .scoreboard-tile .label { opacity: .9; font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; }
   .scoreboard-number { font-size: clamp(1.5rem, 3.2vw, 2rem); font-weight: 700; }
 
   /* Simple reveal animation */
   .reveal { opacity: 0; transform: translateY(16px); transition: opacity .5s ease, transform .5s ease; }
   .reveal.in { opacity: 1; transform: none; }
 
-  /* Float animation for icons */
+  /* Float animation for icons (decorative) */
   .float-y { animation: floatY 3.5s ease-in-out infinite; }
-  @keyframes floatY {
-    0%,100% { transform: translateY(0); }
-    50% { transform: translateY(-6px); }
-  }
+  @keyframes floatY { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
   /* Table polish */
   .table thead th { border-bottom-width: 1px; text-transform: uppercase; font-size: .75rem; letter-spacing: .06em; }
 
   /* News list */
   .news-item + .news-item { border-top: 1px solid var(--bs-border-color); }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal { opacity: 1; transform: none; transition: none; }
+    .float-y { animation: none !important; }
+  }
+
+  /* Focus rings for better keyboard nav */
+  .btn:focus-visible, a:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; border-radius: .5rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 
 <!-- Hero / Slider -->
-<section class="container py-4 section">
+<section class="container py-4 section" aria-labelledby="hero-heading">
   <div id="homeCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="5000">
     <div class="carousel-indicators">
-      <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
-      <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+      <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="0" class="active"
+              aria-current="true" aria-label="Welcome slide"></button>
+      <button type="button" data-bs-target="#homeCarousel" data-bs-slide-to="1" aria-label="Football slide"></button>
     </div>
 
     <div class="carousel-inner rounded-3 shadow-sm">
@@ -67,19 +73,43 @@
             <div class="row align-items-center g-4">
               <div class="col-12 col-lg-7">
                 <p class="text-uppercase text-muted mb-2">Get Started</p>
-                <h1 class="display-5 fw-bold hero-title">YOU <span class="text-primary">CAN</span></h1>
-                <p class="lead mb-4">Train, compete, and manage your applications without the UI benching you.</p>
+                <h1 id="hero-heading" class="display-5 fw-bold hero-title">
+                  {% if user.is_authenticated %}
+                    Welcome{% if user.first_name %}, {{ user.first_name }}{% endif %}. <span class="text-primary">Game on</span>.
+                  {% else %}
+                    YOU <span class="text-primary">CAN</span>
+                  {% endif %}
+                </h1>
+                <p class="lead mb-4">
+                  {% if user.is_authenticated %}
+                    Manage your profile, requests, and applications in one place.
+                  {% else %}
+                    Train, compete, and apply without the UI benching you.
+                  {% endif %}
+                </p>
+
                 <div class="d-flex flex-wrap gap-2">
-                  <a href="{% url 'admissions:application_create' %}" class="btn btn-primary">
-                    <i class="bi bi-clipboard-plus me-1"></i> New application
-                  </a>
-                  <a href="{% url 'admissions:my_applications' %}" class="btn btn-outline-secondary">
-                    <i class="bi bi-files me-1"></i> My applications
-                  </a>
+                  {% if user.is_authenticated %}
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-primary">
+                      <i class="bi bi-person-badge me-1" aria-hidden="true"></i> My profile
+                    </a>
+                    <a href="{% url 'admissions:application_create' %}" class="btn btn-outline-secondary">
+                      <i class="bi bi-clipboard-plus me-1" aria-hidden="true"></i> New application
+                    </a>
+                  {% else %}
+                    {# Replace with your login/register routes if different #}
+                    <a href="{% url 'admissions:application_create' %}" class="btn btn-primary">
+                      <i class="bi bi-clipboard-plus me-1" aria-hidden="true"></i> New application
+                    </a>
+                    <a href="{% url 'admissions:my_applications' %}" class="btn btn-outline-secondary">
+                      <i class="bi bi-files me-1" aria-hidden="true"></i> My applications
+                    </a>
+                  {% endif %}
                 </div>
               </div>
+
               <div class="col-12 col-lg-5 d-none d-lg-flex justify-content-end">
-                <div class="display-4 float-y"><i class="bi bi-trophy-fill text-warning"></i></div>
+                <div class="display-4 float-y" aria-hidden="true"><i class="bi bi-trophy-fill text-warning"></i></div>
               </div>
             </div>
           </div>
@@ -93,15 +123,17 @@
             <div class="row align-items-center g-4">
               <div class="col-12 col-lg-7">
                 <p class="text-uppercase text-muted mb-2">Welcome to</p>
-                <h1 class="display-5 fw-bold hero-title">COLLEGE FOOTBALL</h1>
+                <h2 class="display-5 fw-bold hero-title">COLLEGE FOOTBALL</h2>
                 <p class="lead mb-4">Fixtures, stats, and teams in one place. Less scrolling, more scoring.</p>
                 <div class="d-flex flex-wrap gap-2">
-                  <a href="{% url 'home' %}" class="btn btn-dark"><i class="bi bi-grid-3x3-gap-fill me-1"></i> Explore</a>
-                  <a href="" class="btn btn-outline-secondary"><i class="bi bi-envelope me-1"></i> Contact</a>
+                  <a href="#" class="btn btn-dark"><i class="bi bi-grid-3x3-gap-fill me-1" aria-hidden="true"></i> Explore</a>
+                  <a href="mailto:sports@example.com" class="btn btn-outline-secondary">
+                    <i class="bi bi-envelope me-1" aria-hidden="true"></i> Contact
+                  </a>
                 </div>
               </div>
               <div class="col-12 col-lg-5 d-none d-lg-flex justify-content-end">
-                <div class="display-4 float-y"><i class="bi bi-activity text-primary"></i></div>
+                <div class="display-4 float-y" aria-hidden="true"><i class="bi bi-activity text-primary"></i></div>
               </div>
             </div>
           </div>
@@ -110,41 +142,50 @@
     </div>
 
     <!-- controls -->
-    <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev" aria-label="Previous">
+    <button class="carousel-control-prev" type="button" data-bs-target="#homeCarousel" data-bs-slide="prev" aria-label="Previous slide">
       <span class="carousel-control-prev-icon" aria-hidden="true"></span>
     </button>
-    <button class="carousel-control-next" type="button" data-bs-target="#homeCarousel" data-bs-slide="next" aria-label="Next">
+    <button class="carousel-control-next" type="button" data-bs-target="#homeCarousel" data-bs-slide="next" aria-label="Next slide">
       <span class="carousel-control-next-icon" aria-hidden="true"></span>
     </button>
   </div>
 </section>
 
 <!-- Scoreboard Stats -->
-<section class="container section reveal">
+<section class="container section reveal" aria-labelledby="stats-heading">
+  <h2 id="stats-heading" class="visually-hidden">Key stats</h2>
   <div class="scoreboard-strip p-3 p-lg-4 shadow-sm">
     <div class="row g-3 g-lg-4 text-center">
       <div class="col-6 col-lg-3">
         <div class="scoreboard-tile">
           <div class="label">Registered athletes</div>
-          <div class="scoreboard-number"><span class="count" data-count="1240">0</span></div>
+          <div class="scoreboard-number">
+            <span class="count" data-count="{{ registered_athletes|default:1240 }}" aria-live="polite">0</span>
+          </div>
         </div>
       </div>
       <div class="col-6 col-lg-3">
         <div class="scoreboard-tile">
           <div class="label">Teams</div>
-          <div class="scoreboard-number"><span class="count" data-count="58">0</span></div>
+          <div class="scoreboard-number">
+            <span class="count" data-count="{{ teams_total|default:58 }}" aria-live="polite">0</span>
+          </div>
         </div>
       </div>
       <div class="col-6 col-lg-3">
         <div class="scoreboard-tile">
           <div class="label">Matches scheduled</div>
-          <div class="scoreboard-number"><span class="count" data-count="132">0</span></div>
+          <div class="scoreboard-number">
+            <span class="count" data-count="{{ matches_scheduled|default:132 }}" aria-live="polite">0</span>
+          </div>
         </div>
       </div>
       <div class="col-6 col-lg-3">
         <div class="scoreboard-tile">
           <div class="label">Venues</div>
-          <div class="scoreboard-number"><span class="count" data-count="12">0</span></div>
+          <div class="scoreboard-number">
+            <span class="count" data-count="{{ venues_total|default:12 }}" aria-live="polite">0</span>
+          </div>
         </div>
       </div>
     </div>
@@ -152,14 +193,15 @@
 </section>
 
 <!-- Quick Actions -->
-<section class="container section reveal">
+<section class="container section reveal" aria-labelledby="quick-actions">
+  <h2 id="quick-actions" class="visually-hidden">Quick actions</h2>
   <div class="row g-3 g-lg-4">
     <div class="col-12 col-md-6 col-lg-3">
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body d-flex flex-column">
           <div class="d-flex align-items-center justify-content-between mb-2">
-            <h5 class="card-title mb-0">Apply</h5>
-            <i class="bi bi-pencil-square fs-4 text-primary"></i>
+            <h3 class="h5 card-title mb-0">Apply</h3>
+            <i class="bi bi-pencil-square fs-4 text-primary" aria-hidden="true"></i>
           </div>
           <p class="text-muted small flex-grow-1">Start a new application for the upcoming season.</p>
           <a href="{% url 'admissions:application_create' %}" class="btn btn-primary mt-2">New application</a>
@@ -171,8 +213,8 @@
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body d-flex flex-column">
           <div class="d-flex align-items-center justify-content-between mb-2">
-            <h5 class="card-title mb-0">My applications</h5>
-            <i class="bi bi-folder2-open fs-4 text-success"></i>
+            <h3 class="h5 card-title mb-0">My applications</h3>
+            <i class="bi bi-folder2-open fs-4 text-success" aria-hidden="true"></i>
           </div>
           <p class="text-muted small flex-grow-1">Review your submissions and check statuses.</p>
           <a href="{% url 'admissions:my_applications' %}" class="btn btn-outline-secondary mt-2">Open</a>
@@ -184,11 +226,11 @@
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body d-flex flex-column">
           <div class="d-flex align-items-center justify-content-between mb-2">
-            <h5 class="card-title mb-0">Fixtures</h5>
-            <i class="bi bi-calendar2-week fs-4 text-danger"></i>
+            <h3 class="h5 card-title mb-0">Fixtures</h3>
+            <i class="bi bi-calendar2-week fs-4 text-danger" aria-hidden="true"></i>
           </div>
           <p class="text-muted small flex-grow-1">Upcoming matches across campus venues.</p>
-          <a href="" class="btn btn-outline-secondary mt-2">View schedule</a>
+          <a href="#" class="btn btn-outline-secondary mt-2">View schedule</a> {# TODO: link to fixtures list #}
         </div>
       </div>
     </div>
@@ -197,11 +239,11 @@
       <div class="card h-100 shadow-sm border-0">
         <div class="card-body d-flex flex-column">
           <div class="d-flex align-items-center justify-content-between mb-2">
-            <h5 class="card-title mb-0">Teams</h5>
-            <i class="bi bi-people fs-4 text-warning"></i>
+            <h3 class="h5 card-title mb-0">Teams</h3>
+            <i class="bi bi-people fs-4 text-warning" aria-hidden="true"></i>
           </div>
           <p class="text-muted small flex-grow-1">Browse teams and player rosters.</p>
-          <a href="" class="btn btn-outline-secondary mt-2">Explore teams</a>
+          <a href="#" class="btn btn-outline-secondary mt-2">Explore teams</a> {# TODO: link to teams page #}
         </div>
       </div>
     </div>
@@ -209,14 +251,14 @@
 </section>
 
 <!-- Upcoming Fixtures + Headlines -->
-<section class="container section reveal">
+<section class="container section reveal" aria-labelledby="fixtures-headlines">
   <div class="row g-4">
     <div class="col-lg-7">
       <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-3">
-            <h5 class="mb-0">Upcoming fixtures</h5>
-            <a href="" class="small text-decoration-none">See all</a>
+            <h2 id="fixtures-headlines" class="h5 mb-0">Upcoming fixtures</h2>
+            <a href="#" class="small text-decoration-none">See all</a> {# TODO: link to fixtures list #}
           </div>
           <div class="table-responsive">
             <table class="table align-middle">
@@ -229,23 +271,24 @@
                 </tr>
               </thead>
               <tbody>
+                {# Replace with real fixtures; leaving placeholders #}
                 <tr>
                   <td>Oct 05</td>
                   <td>Engineering Eagles vs Science Sharks</td>
                   <td>Main Stadium</td>
-                  <td class="text-end"><a href="" class="btn btn-sm btn-outline-primary">Details</a></td>
+                  <td class="text-end"><a href="#" class="btn btn-sm btn-outline-primary">Details</a></td>
                 </tr>
                 <tr>
                   <td>Oct 08</td>
                   <td>Commerce Cobras vs Arts Archers</td>
                   <td>East Field</td>
-                  <td class="text-end"><a href="" class="btn btn-sm btn-outline-primary">Details</a></td>
+                  <td class="text-end"><a href="#" class="btn btn-sm btn-outline-primary">Details</a></td>
                 </tr>
                 <tr>
                   <td>Oct 12</td>
                   <td>Law Lions vs Medical Mavericks</td>
                   <td>West Arena</td>
-                  <td class="text-end"><a href="" class="btn btn-sm btn-outline-primary">Details</a></td>
+                  <td class="text-end"><a href="#" class="btn btn-sm btn-outline-primary">Details</a></td>
                 </tr>
               </tbody>
             </table>
@@ -259,8 +302,8 @@
       <div class="card shadow-sm border-0 h-100">
         <div class="card-body">
           <div class="d-flex align-items-center justify-content-between mb-3">
-            <h5 class="mb-0">News & announcements</h5>
-            <a href="" class="small text-decoration-none">All news</a>
+            <h2 class="h5 mb-0">News & announcements</h2>
+            <a href="#" class="small text-decoration-none">All news</a> {# TODO: link to news index #}
           </div>
 
           <div class="news-item py-2">
@@ -281,7 +324,7 @@
             <div class="small text-muted">Upload forms before your first fixture.</div>
           </div>
 
-          <a href="" class="btn btn-outline-secondary w-100 mt-3">Post an announcement</a>
+          <a href="#" class="btn btn-outline-secondary w-100 mt-3">Post an announcement</a> {# TODO: restrict to staff/coach #}
         </div>
       </div>
     </div>
@@ -289,15 +332,41 @@
 </section>
 
 <!-- CTA Banner -->
-<section class="container section reveal">
+<section class="container section reveal" aria-labelledby="cta-join">
   <div class="p-4 p-lg-5 bg-body-tertiary rounded-3 border d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
     <div>
-      <h4 class="mb-1">Ready to join a team?</h4>
-      <div class="text-muted">Create your profile and throw your name into the draft.</div>
+      <h2 id="cta-join" class="h4 mb-1">
+        {% if user.is_authenticated and user.role == 'guest' %}
+          Ready to join a team?
+        {% elif user.is_authenticated %}
+          Keep building your player profile
+        {% else %}
+          New here? Start your journey
+        {% endif %}
+      </h2>
+      <div class="text-muted">
+        {% if user.is_authenticated and user.role == 'guest' %}
+          Complete your profile and submit a player request for approval.
+        {% elif user.is_authenticated %}
+          Update your details and track requests in your profile.
+        {% else %}
+          Create an account, apply, and explore teams and fixtures.
+        {% endif %}
+      </div>
     </div>
     <div class="d-flex gap-2">
-      <a href="" class="btn btn-dark"><i class="bi bi-person-plus me-1"></i> Build profile</a>
-      <a href="{% url 'admissions:application_create' %}" class="btn btn-outline-secondary">Apply now</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'accounts:profile' %}" class="btn btn-dark">
+          <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
+          Build profile
+        </a>
+      {% else %}
+        <a href="{% url 'admissions:application_create' %}" class="btn btn-dark">
+          <i class="bi bi-person-plus me-1" aria-hidden="true"></i>
+          Apply now
+        </a>
+      {% endif %}
+      <a href="{% url 'admissions:my_applications' %}" class="btn btn-outline-secondary">My applications</a>
     </div>
   </div>
 </section>
@@ -306,6 +375,22 @@
 
 {% block extra_js %}
 <script>
+  // Respect reduced motion: pause carousel if the user prefers less motion
+  (function () {
+    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) {
+      const el = document.getElementById('homeCarousel');
+      if (el && typeof bootstrap !== 'undefined' && bootstrap.Carousel) {
+        const inst = bootstrap.Carousel.getOrCreateInstance(el);
+        inst.pause();
+      } else {
+        // Fallback: stop the data attribute from auto-cycling
+        const el2 = document.getElementById('homeCarousel');
+        if (el2) el2.removeAttribute('data-bs-ride');
+      }
+    }
+  })();
+
   // Reveal on scroll
   (function () {
     const els = document.querySelectorAll('.reveal');
@@ -317,11 +402,15 @@
     els.forEach(el => obs.observe(el));
   })();
 
-  // Count-up stats when visible
+  // Count-up stats when visible (skip if reduced motion)
   (function () {
+    const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const counters = document.querySelectorAll('.count');
+    if (prefersReduced) {
+      counters.forEach(el => el.textContent = parseInt(el.dataset.count || '0', 10).toLocaleString());
+      return;
+    }
     const seen = new WeakSet();
-
     const animate = (el) => {
       if (seen.has(el)) return;
       seen.add(el);
@@ -329,7 +418,6 @@
       const duration = 1200; // ms
       const start = performance.now();
       const from = 0;
-
       const step = (ts) => {
         const p = Math.min((ts - start) / duration, 1);
         const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
@@ -338,11 +426,9 @@
       };
       requestAnimationFrame(step);
     };
-
     const io = new IntersectionObserver((entries) => {
       entries.forEach(e => { if (e.isIntersecting) animate(e.target); });
     }, { threshold: 0.5 });
-
     counters.forEach(c => io.observe(c));
   })();
 </script>

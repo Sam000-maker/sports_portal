@@ -1,25 +1,56 @@
-#accounts/models.py
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser, UserManager as DjangoUserManager
 from django.db import models
 from django.db.models import Q
+from django.dispatch import receiver
+from django.db.models.signals import post_migrate
+
+# -----------------------------
+# Sports live in accounts
+# -----------------------------
+class Sport(models.Model):
+    class Code(models.TextChoices):
+        FOOTBALL = "football", "Football"
+        BASKETBALL = "basketball", "Basketball"
+        VOLLEYBALL = "volleyball", "Volleyball"
+        BADMINTON = "badminton", "Badminton"
+        CRICKET = "cricket", "Cricket"
+        ATHLETICS = "athletics", "Athletics"
+
+    # Store the canonical code; display comes from the enum's label
+    code = models.CharField(
+        max_length=32,
+        choices=Code.choices,
+        unique=True,
+        db_index=True,
+    )
+
+    class Meta:
+        ordering = ["code"]
+        verbose_name = "Sport"
+        verbose_name_plural = "Sports"
+
+    def __str__(self) -> str:
+        return self.get_code_display()
+
+    @property
+    def name(self) -> str:
+        # Backwards-friendly alias if you used `name` in templates
+        return self.get_code_display()
 
 
 class UserManager(DjangoUserManager):
     use_in_migrations = True
 
     def create_user(self, username, email=None, password=None, **extra_fields):
-        # Default: not staff, not superuser, guest role
         extra_fields.setdefault("is_staff", False)
         extra_fields.setdefault("is_superuser", False)
         extra_fields.setdefault("role", User.Roles.GUEST)
-        # Normalize email early
         if email:
             email = email.strip().lower()
         return super().create_user(username, email, password, **extra_fields)
 
     def create_superuser(self, username, email=None, password=None, **extra_fields):
-        # Superusers must be staff + superuser + ADMIN role
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("role", User.Roles.ADMIN)
@@ -37,8 +68,8 @@ class UserManager(DjangoUserManager):
 
 class User(AbstractUser):
     """
-    Custom user with a single primary role for navigation/permissions.
-    Keep it boring and predictable. Future player profile lives in players app.
+    Custom user with a single primary role.
+    Sports are attached directly so admin/coach approvals can promote and copy selections.
     """
     class Roles(models.TextChoices):
         ADMIN = "admin", "Admin"
@@ -53,7 +84,9 @@ class User(AbstractUser):
     phone = models.CharField(max_length=20, blank=True)
     avatar = models.ImageField(upload_to="avatars/", null=True, blank=True)
 
-    # Smarter manager
+    # user’s approved sports live here
+    sports = models.ManyToManyField(Sport, blank=True, related_name="users")
+
     objects = UserManager()
 
     def is_admin_like(self) -> bool:
@@ -97,3 +130,59 @@ class RoleChangeLog(models.Model):
 
     def __str__(self) -> str:
         return f"{self.changed_by} -> {self.target}: {self.old_role} → {self.new_role} @ {self.changed_at:%Y-%m-%d %H:%M}"
+
+
+# -------------------------------------------------------
+# Player request workflow, managed by admin/coach
+# -------------------------------------------------------
+class PendingPlayerRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="player_requests"
+    )
+    sports = models.ManyToManyField(Sport, related_name="pending_requests")
+    bio = models.TextField(blank=True)
+    achievements = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True
+    )
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="player_requests_reviewed",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_note = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        ordering = ["-submitted_at"]
+        constraints = [
+            # Only one pending request per user
+            models.UniqueConstraint(
+                fields=["user", "status"],
+                condition=Q(status="pending"),
+                name="unique_pending_request_per_user",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"PlayerRequest<{self.user} {self.status}>"
+
+
+# -------------------------------------------------------
+# Auto-seed sports after migrate so the profile dropdown isn't empty
+# -------------------------------------------------------
+@receiver(post_migrate)
+def ensure_default_sports(sender, **kwargs):
+    # Only seed when the accounts app is migrated
+    if sender.label != "accounts":
+        return
+    for code, _label in Sport.Code.choices:
+        Sport.objects.get_or_create(code=code)
