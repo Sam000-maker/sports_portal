@@ -1,4 +1,4 @@
-#admissions/views.py
+# admissions/views.py
 from __future__ import annotations
 
 from django.contrib import messages
@@ -32,13 +32,27 @@ from .services import start_admissions, stop_admissions, extend_admissions
 
 
 # -------------------------------
-# Applicant views
+# Role helpers
+# -------------------------------
+def _is_guest_role(user) -> bool:
+    """Explicit guest role (authenticated but non-staff UX)."""
+    return getattr(user, "role", "") == "guest"
+
+
+# -------------------------------
+# Applicant list (redirect guests to their single profile)
 # -------------------------------
 class ApplicationListView(LoginRequiredMixin, ListView):
     model = SportsQuotaApplication
     paginate_by = 20
     template_name = "admissions/application_list.html"
     context_object_name = "applications"
+
+    def dispatch(self, request, *args, **kwargs):
+        # Guests don't get a table/list — send them to their own profile page.
+        if _is_guest_role(request.user):
+            return redirect("admissions:my_application")
+        return super().dispatch(request, *args, **kwargs)
 
     def _parse_cycle_query(self, raw: str | None) -> int | None:
         if not raw:
@@ -76,13 +90,12 @@ class ApplicationListView(LoginRequiredMixin, ListView):
                     qs = qs.filter(cycle_id=pk)
             return qs
 
-        # Regular users only see their own
-        return qs.filter(applicant_id=self.request.user.id)
+        # Non-admins would have been redirected in dispatch().
+        return qs.none()
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
 
-        # Build the dropdown of cycles for filtering (no invalid .only('public_id'))
         if is_admin_like(self.request.user):
             cycles_qs = (
                 ApplicationCycle.objects.only("id", "name", "start_date")
@@ -109,12 +122,12 @@ class ApplicationListView(LoginRequiredMixin, ListView):
         return ctx
 
 
-class ApplicationCreateView(LoginRequiredMixin, View):
-    """
-    Single-page application with inline documents.
-    Validates cycle window, binds applicant, saves atomically.
-    """
-    template_name = "admissions/application_form.html"
+# -------------------------------
+# Create flows (guest vs staff UI)
+# -------------------------------
+class _ApplicationCreateBase(LoginRequiredMixin, View):
+    """Shared create logic (live-cycle check, form + inline docs)."""
+    template_name: str = ""
     success_url = reverse_lazy("admissions:my_applications")
 
     def _live_cycles_qs(self):
@@ -123,24 +136,28 @@ class ApplicationCreateView(LoginRequiredMixin, View):
             is_active=True, start_date__lte=today, end_date__gte=today
         )
 
+    def _render(self, request, form=None, formset=None):
+        form = form or SportsQuotaApplicationForm()
+        form.fields["cycle"].queryset = self._live_cycles_qs()
+        formset = formset or ApplicationDocumentFormSet()
+        return render(request, self.template_name, {"form": form, "formset": formset})
+
     def dispatch(self, request, *args, **kwargs):
+        # Admissions window check
         if not self._live_cycles_qs().exists():
             messages.error(request, "Admissions are currently closed.")
             return redirect("admissions:my_applications")
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
-        form = SportsQuotaApplicationForm()
-        form.fields["cycle"].queryset = self._live_cycles_qs()
-        formset = ApplicationDocumentFormSet()
-        return render(request, self.template_name, {"form": form, "formset": formset})
+        return self._render(request)
 
     @transaction.atomic
     def post(self, request):
         form = SportsQuotaApplicationForm(request.POST, request.FILES)
         form.fields["cycle"].queryset = self._live_cycles_qs()
 
-        # Bind a temporary instance for the formset so validation (min_num) works
+        # Temp instance so formset min_num validation triggers
         temp_instance = SportsQuotaApplication(applicant=request.user)
         formset = ApplicationDocumentFormSet(request.POST, request.FILES, instance=temp_instance)
 
@@ -155,25 +172,141 @@ class ApplicationCreateView(LoginRequiredMixin, View):
 
             messages.success(request, "Application submitted with documents.")
             return redirect(self.success_url)
+        return self._render(request, form, formset)
 
-        return render(request, self.template_name, {"form": form, "formset": formset})
+
+class ApplicationCreateStaffView(_ApplicationCreateBase):
+    """Backoffice template for admin/coach/staff."""
+    template_name = "admissions/application_form_staff.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not is_admin_like(request.user):
+            if _is_guest_role(request.user):
+                return redirect("admissions:application_create_guest")
+            messages.error(request, "Admin/coach/staff access required.")
+            return redirect("admissions:my_applications")
+        return super().dispatch(request, *args, **kwargs)
 
 
-class ApplicationDetailView(LoginRequiredMixin, DetailView):
+class ApplicationCreateGuestView(_ApplicationCreateBase):
+    """Public template for authenticated 'guest' role."""
+    template_name = "admissions/application_form_guest.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not _is_guest_role(request.user):
+            if is_admin_like(request.user):
+                return redirect("admissions:application_create_staff")
+            messages.error(request, "Guest account required for this page.")
+            return redirect("admissions:my_applications")
+        return super().dispatch(request, *args, **kwargs)
+
+
+class ApplicationCreateRouterView(LoginRequiredMixin, View):
+    """Smart router for /applications/new/ (keeps old links working)."""
+    def get(self, request, *args, **kwargs):
+        if is_admin_like(request.user):
+            return redirect("admissions:application_create_staff")
+        if _is_guest_role(request.user):
+            return redirect("admissions:application_create_guest")
+        messages.error(request, "You don't have access to create an application here.")
+        return redirect("admissions:my_applications")
+
+
+# -------------------------------
+# Guest: Single “My Application” page
+# -------------------------------
+class MyApplicationView(LoginRequiredMixin, View):
+    """
+    Guests land here instead of a list. Shows only *their* application.
+    If none exists, send to the guest create form.
+    Staff is redirected to the admin list.
+    """
+    template_name = "admissions/application_detail_guest.html"
+
+    def get(self, request, *args, **kwargs):
+        if is_admin_like(request.user):
+            return redirect("admissions:my_applications")
+
+        app = (
+            SportsQuotaApplication.objects
+            .select_related("cycle", "applicant")
+            .prefetch_related("documents")
+            .filter(applicant_id=request.user.id)
+            .order_by("-submitted_at")
+            .first()
+        )
+        if not app:
+            messages.info(request, "You have not submitted an application yet.")
+            return redirect("admissions:application_create_guest")
+
+        return render(request, self.template_name, {"object": app})
+
+
+class ApplicationUpdateSelfView(LoginRequiredMixin, UpdateView):
+    """
+    Guest can edit their own application until it is locked by staff.
+    Uses the same public form as creation (no admin fields).
+    """
+    model = SportsQuotaApplication
+    form_class = SportsQuotaApplicationForm
+    template_name = "admissions/application_edit_guest.html"
+
+    def get_queryset(self):
+        # Only allow the owner to access their object
+        return (
+            SportsQuotaApplication.objects
+            .filter(applicant_id=self.request.user.id)
+            .select_related("cycle")
+        )
+
+    def dispatch(self, request, *args, **kwargs):
+        obj = get_object_or_404(SportsQuotaApplication, pk=kwargs["pk"], applicant_id=request.user.id)
+        if obj.locked:
+            messages.warning(request, "This application is locked by staff and cannot be edited.")
+            return redirect("admissions:my_application")
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Application updated.")
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse("admissions:my_application")
+
+
+# -------------------------------
+# Staff detail / decision / controls
+# -------------------------------
+class StaffRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        return is_admin_like(self.request.user)
+
+    def handle_no_permission(self):
+        messages.error(self.request, "Admin access required.")
+        return redirect("admissions:my_applications")
+
+
+class ApplicationDetailView(StaffRequiredMixin, DetailView):
+    """
+    Staff-only detail page (backoffice template).
+    Guests should use MyApplicationView.
+    """
     model = SportsQuotaApplication
     template_name = "admissions/application_detail.html"
 
     def get_queryset(self):
-        qs = super().get_queryset().select_related("cycle", "applicant").prefetch_related("documents")
-        if is_admin_like(self.request.user):
-            return qs
-        return qs.filter(applicant_id=self.request.user.id)
+        return (
+            super()
+            .get_queryset()
+            .select_related("cycle", "applicant")
+            .prefetch_related("documents")
+        )
 
 
 class DocumentUploadView(LoginRequiredMixin, View):
     """
-    Kept for admins to append files if needed after submission.
-    Regular users use the single-page create flow; further edits are blocked when locked.
+    Admin can append files anytime.
+    Applicant can upload *until* locked.
     """
     template_name = "admissions/document_upload.html"
 
@@ -184,7 +317,7 @@ class DocumentUploadView(LoginRequiredMixin, View):
             return redirect("admissions:my_applications")
         if self.application.locked and not is_admin_like(request.user):
             messages.error(request, "Application is locked and cannot be modified.")
-            return redirect("admissions:application_detail", pk=self.application.pk)
+            return redirect("admissions:my_application")
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, pk):
@@ -197,25 +330,16 @@ class DocumentUploadView(LoginRequiredMixin, View):
         if formset.is_valid():
             formset.save()
             messages.success(self.request, "Documents updated.")
-            return redirect("admissions:application_detail", pk=self.application.pk)
+            # Staff -> staff detail; guest -> my app
+            if is_admin_like(request.user):
+                return redirect("admissions:application_detail", pk=self.application.pk)
+            return redirect("admissions:my_application")
         return render(request, self.template_name, {"application": self.application, "formset": formset})
-
-
-# -------------------------------
-# Admin review and controls
-# -------------------------------
-class StaffRequiredMixin(UserPassesTestMixin):
-    def test_func(self):
-        return is_admin_like(self.request.user)
-
-    def handle_no_permission(self):
-        messages.error(self.request, "Admin access required.")
-        return redirect("admissions:my_applications")
 
 
 class ApplicationReviewUpdateView(StaffRequiredMixin, UpdateView):
     """
-    Admin review/edit page. Edits the full application AND manages documents inline.
+    Staff review/edit page (admin fields + inline docs).
     """
     model = SportsQuotaApplication
     form_class = SportsQuotaAdminForm
@@ -257,14 +381,11 @@ class ApplicationReviewUpdateView(StaffRequiredMixin, UpdateView):
         notes = form.cleaned_data.get("review_notes") or ""
         obj.reviewer = self.request.user
 
-        # Save the main form first
         obj.save()
         form.save_m2m()
 
-        # Save documents (add/replace/delete)
         doc_formset.save()
 
-        # Handle decision buttons
         if action in {"approve", "reject", "under_review"}:
             if action == "approve":
                 obj.status = SportsQuotaApplication.Status.APPROVED
@@ -279,7 +400,6 @@ class ApplicationReviewUpdateView(StaffRequiredMixin, UpdateView):
                 messages.info(self.request, "Application marked under review.")
 
             obj.save(update_fields=["status", "locked", "reviewer"])
-
             if hasattr(obj, "set_status"):
                 obj.set_status(obj.status, self.request.user, notes)
         else:
@@ -297,7 +417,7 @@ class ApplicationReviewUpdateView(StaffRequiredMixin, UpdateView):
 
 class ApplicationDecisionView(StaffRequiredMixin, DetailView):
     """
-    Separate endpoint still supported for quick decisions from the detail view.
+    Quick decision endpoint posting back to staff detail template.
     """
     model = SportsQuotaApplication
     template_name = "admissions/application_detail.html"
@@ -332,6 +452,9 @@ class ApplicationDecisionView(StaffRequiredMixin, DetailView):
         return redirect("admissions:application_detail", pk=obj.pk)
 
 
+# -------------------------------
+# Admin cycle controls
+# -------------------------------
 class AdmissionControlView(LoginRequiredMixin, StaffRequiredMixin, TemplateView):
     template_name = "admissions/admin_cycle.html"
 
@@ -341,7 +464,7 @@ class AdmissionControlView(LoginRequiredMixin, StaffRequiredMixin, TemplateView)
           - q: search text
           - app_count per cycle (annotate)
           - counts.{live,upcoming,past}
-          - live_next_close, upcoming_next_open for summary cards
+          - live_next_close, upcoming_next_open
         """
         ctx = super().get_context_data(**kwargs)
         today = timezone.localdate()
@@ -349,7 +472,6 @@ class AdmissionControlView(LoginRequiredMixin, StaffRequiredMixin, TemplateView)
         q = (self.request.GET.get("q") or "").strip()
         base = ApplicationCycle.objects.all().annotate(app_count=Count("applications"))
 
-        # Allow searching by name or public id like "CYC-0007" (or plain integer id)
         cond = Q()
         if q:
             cond |= Q(name__icontains=q)

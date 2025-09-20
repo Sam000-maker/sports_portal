@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Edit Application{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h2 class="mb-3">Edit Sports Quota Application</h2>
+  <p class="text-muted">You can edit until staff locks your application.</p>
+
+  <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+    {% endif %}
+
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">Cycle *</label>
+        {{ form.cycle }} {{ form.cycle.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Sport *</label>
+        {{ form.sport }} {{ form.sport.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Level *</label>
+        {{ form.level }} {{ form.level.errors }}
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label">Playing position</label>
+        {{ form.playing_position }} {{ form.playing_position.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Years experience *</label>
+        {{ form.years_experience }} {{ form.years_experience.errors }}
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <h5 class="mb-3">Applicant details</h5>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Full name *</label>
+        {{ form.full_name }} {{ form.full_name.errors }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Date of Birth</label>
+        {{ form.date_of_birth }} {{ form.date_of_birth.errors }}
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Profile photo</label>
+        {{ form.profile_photo }} {{ form.profile_photo.errors }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Email *</label>
+        {{ form.email }} {{ form.email.errors }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Phone *</label>
+        {{ form.phone }} {{ form.phone.errors }}
+      </div>
+
+      <div class="col-12">
+        <label class="form-label">Address line 1 *</label>
+        {{ form.address_line1 }} {{ form.address_line1.errors }}
+      </div>
+      <div class="col-12">
+        <label class="form-label">Address line 2</label>
+        {{ form.address_line2 }} {{ form.address_line2.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">City *</label>
+        {{ form.city }} {{ form.city.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">State</label>
+        {{ form.state }} {{ form.state.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Postal code</label>
+        {{ form.postal_code }} {{ form.postal_code.errors }}
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">Country *</label>
+        {{ form.country }} {{ form.country.errors }}
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <h5 class="mb-3">Academics & Achievements</h5>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Previous institution</label>
+        {{ form.previous_institution }} {{ form.previous_institution.errors }}
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Academic summary</label>
+        {{ form.academic_summary }} {{ form.academic_summary.errors }}
+      </div>
+      <div class="col-12">
+        <label class="form-label">Achievements</label>
+        {{ form.achievements }} {{ form.achievements.errors }}
+      </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="form-check mt-3">
+      {{ form.consent }} <label class="form-check-label"> {{ form.consent.label }}</label>
+      {{ form.consent.errors }}
+    </div>
+
+    <div class="mt-4 d-flex gap-2">
+      <button class="btn btn-primary">Save changes</button>
+      <a href="{% url 'admissions:my_application' %}" class="btn btn-link">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
