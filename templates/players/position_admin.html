@@ -1,0 +1,72 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Positions & Formations{% endblock %}
+{% block content %}
+<div class="container my-5">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="mb-0">Positions & Formations</h2>
+    <div class="btn-group">
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'players:position_group_new' %}">+ Group</a>
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'players:position_new' %}">+ Position</a>
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'players:formation_new' %}">+ Formation</a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">Groups & Positions</div>
+        <ul class="list-group list-group-flush">
+          {% for g in groups %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>{{ g.sport.name }}</strong> · {{ g.name }}
+                  <div class="small text-muted mt-1">
+                    {% for p in g.positions.all %}
+                      <span class="badge bg-light text-dark me-1">{{ p.code }} ({{ p.min_per_lineup }}–{{ p.max_per_lineup }})</span>
+                    {% empty %}<span class="text-muted">No positions.</span>{% endfor %}
+                  </div>
+                </div>
+                <div class="btn-group btn-group-sm">
+                  <a class="btn btn-outline-primary" href="{% url 'players:position_group_edit' g.pk %}">Edit</a>
+                  <a class="btn btn-outline-danger" href="{% url 'players:position_group_delete' g.pk %}">Delete</a>
+                </div>
+              </div>
+            </li>
+          {% empty %}
+            <li class="list-group-item">No groups yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card">
+        <div class="card-header">Formations</div>
+        <ul class="list-group list-group-flush">
+          {% for f in formations %}
+            <li class="list-group-item d-flex justify-content-between">
+              <div>
+                <strong>{{ f.sport.name }}</strong> · {{ f.name }}
+                <div class="small text-muted mt-1">
+                  {% for row in f.positions.all %}
+                    <span class="badge bg-light text-dark me-1">{{ row.position.code }}: {{ row.count }}</span>
+                  {% empty %}
+                    <span class="text-muted">No positions defined.</span>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="btn-group btn-group-sm">
+                <a class="btn btn-outline-primary" href="{% url 'players:formation_edit' f.pk %}">Edit</a>
+                <a class="btn btn-outline-danger" href="{% url 'players:formation_delete' f.pk %}">Delete</a>
+              </div>
+            </li>
+          {% empty %}
+            <li class="list-group-item">No formations.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

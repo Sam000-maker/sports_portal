@@ -1,5 +1,3 @@
-{% load static %}
-
 {# ---------- SAFE URL RESOLVES (empty if missing) ---------- #}
 {% url 'home' as home_url %}
 {% url 'contact' as contact_url %}
@@ -15,22 +13,20 @@
 {% url 'accounts:login' as login_url %}
 {% url 'accounts:register' as register_url %}
 
-{# Players module (use "as var" so failures become empty string, not template explosions) #}
+{# Players (student) #}
 {% url 'players:dashboard' as player_dashboard_url %}
-{% url 'players:player_register' as player_register_url %}
-{% url 'players:profile_edit' as player_profile_edit_url %}
 {% url 'players:team_list' as team_list_url %}
 {% url 'players:team_create' as team_create_url %}
-{% url 'players:gallery_list' as gallery_list_url %}
-{% url 'players:gallery_upload' as gallery_upload_url %}
 
-{# Admin-facing (staff only) #}
-{% url 'accounts:users_list' as users_list_url %}
+{# Facilities (public) #}
+{% url 'facilities:venue_list' as venue_list_url %}
+
+{# Tournaments (public) #}
+{% url 'tournaments:tournament_list' as tourn_list_url %}
 
 <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
   <div class="container">
     <a class="navbar-brand d-flex align-items-center gap-2" href="{{ home_url }}">
-      <img src="{% static 'images/football/logo2.png' %}" alt="logo" height="36">
       <span class="fw-semibold">Sports Portal</span>
     </a>
 
@@ -45,16 +41,36 @@
           <a class="nav-link" href="{{ home_url }}">Home</a>
         </li>
 
-        {# Admissions dropdown #}
+        {# Admissions: show only if NOT a student #}
+        {% if request.user.is_authenticated and request.user.role == 'student' %}
+          {# no admissions for students #}
+        {% else %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admissions</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="{{ my_apps_url }}">My applications</a></li>
+              <li><a class="dropdown-item" href="{{ app_create_url }}">New application</a></li>
+            </ul>
+          </li>
+        {% endif %}
+
+        {# Facilities: public-only links (no add/booking here) #}
         <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admissions</a>
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Facilities</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="{{ my_apps_url }}">My applications</a></li>
-            <li><a class="dropdown-item" href="{{ app_create_url }}">New application</a></li>
+            <li><a class="dropdown-item" href="{{ venue_list_url }}">Venues</a></li>
           </ul>
         </li>
 
-        {# Players menu (only for role=student) #}
+        {# Tournaments: public list only #}
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Tournaments</a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="{{ tourn_list_url }}">All Tournaments</a></li>
+          </ul>
+        </li>
+
+        {# Players menu (only for students) #}
         {% if request.user.is_authenticated and request.user.role == 'student' %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Players</a>
@@ -63,40 +79,25 @@
                 <li><a class="dropdown-item" href="{{ player_dashboard_url }}">Dashboard</a></li>
                 <li><hr class="dropdown-divider"></li>
               {% endif %}
-              <li><a class="dropdown-item" href="{{ player_profile_edit_url }}">My Profile</a></li>
+              <li><a class="dropdown-item" href="{{ profile_url }}">My Profile</a></li>
               <li><hr class="dropdown-divider"></li>
               <li class="dropdown-header small text-muted">Teams</li>
               <li><a class="dropdown-item" href="{{ team_list_url }}">My Teams</a></li>
               <li><a class="dropdown-item" href="{{ team_create_url }}">Create Team</a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li class="dropdown-header small text-muted">Gallery</li>
-              <li><a class="dropdown-item" href="{{ gallery_list_url }}">All Photos</a></li>
-              <li><a class="dropdown-item" href="{{ gallery_upload_url }}">Upload Photo</a></li>
             </ul>
           </li>
         {% endif %}
 
-        {# If not logged in, nudge into player registration #}
-        {% if not request.user.is_authenticated and player_register_url %}
+        {# Show Register when logged out #}
+        {% if not request.user.is_authenticated and register_url %}
           <li class="nav-item">
-            <a class="nav-link" href="{{ player_register_url }}">Become a Player</a>
+            <a class="nav-link" href="{{ register_url }}">Register</a>
           </li>
         {% endif %}
 
-        {# Contact (blank-safe) #}
         <li class="nav-item">
           <a class="nav-link" href="{{ contact_url }}">Contact</a>
         </li>
-
-        {# Staff-only Admin menu #}
-        {% if request.user.is_staff %}
-          <li class="nav-item dropdown ms-2">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Admin</a>
-            <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{{ users_list_url }}">Users</a></li>
-            </ul>
-          </li>
-        {% endif %}
 
         {# Account controls #}
         <li class="nav-item ms-3">
@@ -109,13 +110,11 @@
                 <span class="visually-hidden">Toggle Dropdown</span>
               </button>
               <ul class="dropdown-menu dropdown-menu-end">
-                {% if request.user.role == 'student' %}
-                  {% if player_dashboard_url %}
-                    <li><a class="dropdown-item" href="{{ player_dashboard_url }}">Player Dashboard</a></li>
-                  {% endif %}
-                  <li><a class="dropdown-item" href="{{ player_profile_edit_url }}">Player Profile</a></li>
+                {% if request.user.role == 'student' and player_dashboard_url %}
+                  <li><a class="dropdown-item" href="{{ player_dashboard_url }}">Player Dashboard</a></li>
                   <li><hr class="dropdown-divider"></li>
                 {% endif %}
+                <li><a class="dropdown-item" href="{{ profile_url }}">Profile</a></li>
                 <li><a class="dropdown-item" href="{{ pwd_reset_url }}">Password reset</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -135,11 +134,10 @@
   </div>
 </nav>
 
-{# ---------- OFFCANVAS (mobile + also works on desktop) ---------- #}
+{# ---------- OFFCANVAS (mobile) ---------- #}
 <div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
   <div class="offcanvas-header">
     <a class="d-flex align-items-center gap-2 text-decoration-none" href="{{ home_url }}">
-      <img src="{% static 'images/football/logo2.png' %}" alt="logo" height="36">
       <span class="fw-semibold text-dark">Sports Portal</span>
     </a>
     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
@@ -149,46 +147,34 @@
     <ul class="navbar-nav flex-column">
       <li class="nav-item"><a class="nav-link" href="{{ home_url }}">Home</a></li>
 
-      <li class="nav-item mt-3">
-        <span class="text-uppercase small text-muted ps-2">Admissions</span>
-      </li>
-      <li class="nav-item"><a class="nav-link" href="{{ my_apps_url }}">My applications</a></li>
-      <li class="nav-item"><a class="nav-link" href="{{ app_create_url }}">New application</a></li>
+      {# Admissions: show only if NOT a student #}
+      {% if request.user.is_authenticated and request.user.role == 'student' %}
+        {# no admissions for students #}
+      {% else %}
+        <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Admissions</span></li>
+        <li class="nav-item"><a class="nav-link" href="{{ my_apps_url }}">My applications</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ app_create_url }}">New application</a></li>
+      {% endif %}
+
+      <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Facilities</span></li>
+      <li class="nav-item"><a class="nav-link" href="{{ venue_list_url }}">Venues</a></li>
+
+      <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Tournaments</span></li>
+      <li class="nav-item"><a class="nav-link" href="{{ tourn_list_url }}">All Tournaments</a></li>
 
       {% if request.user.is_authenticated and request.user.role == 'student' %}
-        <li class="nav-item mt-3">
-          <span class="text-uppercase small text-muted ps-2">Players</span>
-        </li>
-        {% if player_dashboard_url %}
-          <li class="nav-item"><a class="nav-link" href="{{ player_dashboard_url }}">Dashboard</a></li>
-        {% endif %}
-        <li class="nav-item"><a class="nav-link" href="{{ player_profile_edit_url }}">My Profile</a></li>
-
-        <li class="nav-item mt-2">
-          <span class="text-uppercase small text-muted ps-2">Teams</span>
-        </li>
+        <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Players</span></li>
+        {% if player_dashboard_url %}<li class="nav-item"><a class="nav-link" href="{{ player_dashboard_url }}">Dashboard</a></li>{% endif %}
+        <li class="nav-item"><a class="nav-link" href="{{ profile_url }}">My Profile</a></li>
+        <li class="nav-item mt-2"><span class="text-uppercase small text-muted ps-2">Teams</span></li>
         <li class="nav-item"><a class="nav-link" href="{{ team_list_url }}">My Teams</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ team_create_url }}">Create Team</a></li>
-
-        <li class="nav-item mt-2">
-          <span class="text-uppercase small text-muted ps-2">Gallery</span>
-        </li>
-        <li class="nav-item"><a class="nav-link" href="{{ gallery_list_url }}">All Photos</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ gallery_upload_url }}">Upload Photo</a></li>
-      {% elif not request.user.is_authenticated and player_register_url %}
-        <li class="nav-item mt-3"><a class="nav-link" href="{{ player_register_url }}">Become a Player</a></li>
+      {% elif not request.user.is_authenticated and register_url %}
+        <li class="nav-item mt-3"><a class="nav-link" href="{{ register_url }}">Register</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ login_url }}">Login</a></li>
       {% endif %}
 
-      {% if request.user.is_staff %}
-        <li class="nav-item mt-3">
-          <span class="text-uppercase small text-muted ps-2">Admin</span>
-        </li>
-        <li class="nav-item"><a class="nav-link" href="{{ users_list_url }}">Users</a></li>
-      {% endif %}
-
-      <li class="nav-item mt-3">
-        <span class="text-uppercase small text-muted ps-2">Account</span>
-      </li>
+      <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Account</span></li>
       {% if request.user.is_authenticated %}
         <li class="nav-item"><a class="nav-link" href="{{ profile_url }}">Profile</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ pwd_reset_url }}">Password reset</a></li>
@@ -199,14 +185,10 @@
           </form>
         </li>
       {% else %}
-        <li class="nav-item"><a class="nav-link" href="{{ login_url }}">Login</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ register_url }}">Register</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ pwd_reset_url }}">Forgot password</a></li>
       {% endif %}
 
-      <li class="nav-item mt-3">
-        <span class="text-uppercase small text-muted ps-2">Contact</span>
-      </li>
+      <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Contact</span></li>
       <li class="nav-item"><a class="nav-link" href="{{ contact_url }}">Contact</a></li>
     </ul>
 
@@ -217,9 +199,7 @@
         <a class="text-decoration-none text-dark" href=""><i class="bi bi-youtube fs-5"></i></a>
         <a class="text-decoration-none text-dark" href=""><i class="bi bi-instagram fs-5"></i></a>
       </div>
-      <p class="small text-muted mb-0">
-        &copy; 2025 Sports Portal
-      </p>
+      <p class="small text-muted mb-0">&copy; 2025 Sports Portal</p>
     </div>
   </div>
 </div>

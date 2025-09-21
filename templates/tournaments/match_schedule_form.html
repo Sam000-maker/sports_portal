@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Schedule Match{% endblock %}
+{% block content %}
+<div class="container my-5" style="max-width:640px;">
+  <h2 class="mb-3">Schedule Match</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">{{ form.scheduled_at.label_tag }} {{ form.scheduled_at }}</div>
+    <div class="mb-3">{{ form.venue.label_tag }} {{ form.venue }}</div>
+    <div class="mb-3">{{ form.officials.label_tag }} {{ form.officials }}</div>
+    <button class="btn btn-primary">Save & Book</button>
+    <a class="btn btn-secondary" href="javascript:history.back()">Cancel</a>
+  </form>
+</div>
+{% endblock %}

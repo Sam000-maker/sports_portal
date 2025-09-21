@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Add Player to Lineup{% endblock %}
+{% block content %}
+<div class="container my-5" style="max-width:640px;">
+  <h2 class="mb-3">Add Player</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">{{ form.user.label_tag }} {{ form.user }}</div>
+    <div class="mb-3">{{ form.position.label_tag }} {{ form.position }}</div>
+    <div class="mb-3 form-check">
+      {{ form.is_bench }} <label class="form-check-label" for="{{ form.is_bench.id_for_label }}">Bench</label>
+    </div>
+    <button class="btn btn-primary">Add</button>
+    <a class="btn btn-secondary" href="javascript:history.back()">Back</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Tournaments{% endblock %}
+{% block content %}
+<div class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Tournaments</h2>
+    {% if can_manage %}
+      <a class="btn btn-primary" href="{% url 'tournaments:tournament_new' %}">+ New Tournament</a>
+    {% endif %}
+  </div>
+
+  {% if tournaments %}
+    <div class="list-group">
+      {% for t in tournaments %}
+        <div class="list-group-item">
+          <div class="d-flex justify-content-between align-items-center gap-3">
+            <a class="text-decoration-none flex-grow-1" href="{% url 'tournaments:tournament_detail' t.id %}">
+              <div class="d-flex justify-content-between">
+                <div>
+                  <strong>{{ t.name }}</strong>
+                  <span class="text-muted">· {{ t.sport.name }} · {{ t.get_ttype_display }}</span>
+                </div>
+                <small class="text-muted">{{ t.start_date }} → {{ t.end_date }}</small>
+              </div>
+            </a>
+
+            {% if can_manage %}
+              <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'tournaments:tournament_edit' t.id %}">Edit</a>
+                <form method="post"
+                      action="{% url 'tournaments:tournament_delete' t.id %}"
+                      onsubmit="return confirm('Delete tournament \"{{ t.name }}\"? This cannot be undone.');">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                </form>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-secondary">No tournaments yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

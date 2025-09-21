@@ -1,0 +1,178 @@
+{% extends "backoffice/base.html" %}
+{% load i18n static %}
+{% block title %}{{ heading }} · {% trans "New" %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">{% trans "Create Position" %}</h2>
+      <small class="text-muted">
+        {% trans "Examples: GK, DF, MF, FW or G, F, C; set min/max per lineup if applicable." %}
+      </small>
+    </div>
+    <div>
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'players:position_admin' %}">
+        <i class="bi bi-arrow-left me-1"></i> {% trans "Back to Positions Admin" %}
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">{% trans "Tips" %}</div>
+        <div class="card-body small">
+          <ul class="mb-0 ps-3">
+            <li class="mb-2">{% trans "Short code is what users see in lineups (e.g., GK, DF)." %}</li>
+            <li class="mb-2">{% trans "Use min/max to enforce roster constraints." %}</li>
+            <li class="mb-0">{% trans "Mark unique if only one is allowed (e.g., GK, WK)." %}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card admin-card shadow-sm">
+        <div class="card-header fw-semibold">{% trans "Position preview" %}</div>
+        <div class="card-body small">
+          <div class="text-muted">{% trans "Sport" %}</div>
+          <div id="pvSport">—</div>
+          <div class="text-muted mt-2">{% trans "Group" %}</div>
+          <div id="pvGroup">—</div>
+          <div class="text-muted mt-2">{% trans "Name · Code" %}</div>
+          <div id="pvNameCode">—</div>
+          <div class="text-muted mt-2">{% trans "Min / Max" %}</div>
+          <div id="pvMinMax">—</div>
+          <div class="text-muted mt-2">{% trans "Unique" %}</div>
+          <div id="pvUnique">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <form method="post" novalidate id="posForm">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">{% trans "Details" %}</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.sport.id_for_label }}">{{ form.sport.label }} <span class="text-danger">*</span></label>
+                {{ form.sport }}
+                {% for e in form.sport.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.group.id_for_label }}">{{ form.group.label }}</label>
+                {{ form.group }}
+                {% for e in form.group.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.name.id_for_label }}">{{ form.name.label }} <span class="text-danger">*</span></label>
+                {{ form.name }}
+                {% for e in form.name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.code.id_for_label }}">{{ form.code.label }} <span class="text-danger">*</span></label>
+                {{ form.code }}
+                {% for e in form.code.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.min_per_lineup.id_for_label }}">{{ form.min_per_lineup.label }}</label>
+                {{ form.min_per_lineup }}
+                {% for e in form.min_per_lineup.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.max_per_lineup.id_for_label }}">{{ form.max_per_lineup.label }}</label>
+                {{ form.max_per_lineup }}
+                {% for e in form.max_per_lineup.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-12">
+                <div class="form-check">
+                  {{ form.is_unique }}
+                  <label class="form-check-label" for="{{ form.is_unique.id_for_label }}">{{ form.is_unique.label }}</label>
+                </div>
+                {% for e in form.is_unique.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card admin-card shadow-sm">
+          <div class="card-header fw-semibold">{% trans "Action" %}</div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1"></i> {% trans "Save position" %}</button>
+              <a class="btn btn-outline-secondary" href="{% url 'players:position_admin' %}">{% trans "Cancel" %}</a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+          <strong>{% trans "Please fix the errors below." %}</strong>
+          <ul class="mb-0 small">
+            {% for field in form.visible_fields %}{% if field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</li>
+            {% endif %}{% endfor %}
+            {% if form.non_field_errors %}{% for err in form.non_field_errors %}
+              <li>{{ err }}</li>
+            {% endfor %}{% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  {% trans "Yes" as YES %}
+  {% trans "No" as NO %}
+
+  (function () {
+    function selText(el){ if(!el) return null; const i=el.selectedIndex; return i>=0? el.options[i].text : null; }
+
+    const s  = document.getElementById("{{ form.sport.id_for_label }}");
+    const g  = document.getElementById("{{ form.group.id_for_label }}");
+    const n  = document.getElementById("{{ form.name.id_for_label }}");
+    const c  = document.getElementById("{{ form.code.id_for_label }}");
+    const mi = document.getElementById("{{ form.min_per_lineup.id_for_label }}");
+    const ma = document.getElementById("{{ form.max_per_lineup.id_for_label }}");
+    const uq = document.getElementById("{{ form.is_unique.id_for_label }}");
+
+    const pvSport    = document.getElementById("pvSport");
+    const pvGroup    = document.getElementById("pvGroup");
+    const pvNameCode = document.getElementById("pvNameCode");
+    const pvMinMax   = document.getElementById("pvMinMax");
+    const pvUnique   = document.getElementById("pvUnique");
+
+    const I18N = {
+      yes: "{{ YES|escapejs }}",
+      no: "{{ NO|escapejs }}"
+    };
+
+    function update() {
+      pvSport.textContent    = selText(s) || "—";
+      pvGroup.textContent    = selText(g) || "—";
+      const name = n && n.value ? n.value.trim() : "";
+      const code = c && c.value ? c.value.trim() : "";
+      pvNameCode.textContent = (name || code) ? `${name}${name && code ? " · " : ""}${code}` : "—";
+      pvMinMax.textContent   = (mi && mi.value ? mi.value : "0") + " / " + (ma && ma.value ? ma.value : "—");
+      pvUnique.textContent   = (uq && uq.checked) ? I18N.yes : I18N.no;
+    }
+
+    [s,g,n,c,mi,ma,uq].forEach(function(el){
+      if (!el) return;
+      el.addEventListener(el.type === 'checkbox' ? 'change' : 'input', update);
+    });
+
+    update();
+  })();
+</script>
+{% endblock %}

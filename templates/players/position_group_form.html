@@ -1,0 +1,189 @@
+{% extends "backoffice/base.html" %}
+{% load i18n static %}
+{% block title %}{{ heading }} · {% trans "New" %}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">{% trans "Create Position Group" %}</h2>
+      <small class="text-muted">
+        {% trans "Group related positions (e.g., Defense, Attack, Singles). Coaches will reuse these across sports." %}
+      </small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'players:position_admin' %}">
+        <i class="bi bi-arrow-left me-1"></i> {% trans "Back to Positions Admin" %}
+      </a>
+    </div>
+  </div>
+
+  {% if messages %}
+    <div class="mb-3">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'secondary' }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="row g-3">
+    <!-- Left: Guidance + Live preview -->
+    <div class="col-md-4">
+      <div class="card admin-card shadow-sm mb-3">
+        <div class="card-header fw-semibold">{% trans "Before you start" %}</div>
+        <div class="card-body small">
+          <ul class="mb-0 ps-3">
+            <li class="mb-2">{% trans "Use a clear name like 'Defense' or 'Singles'." %}</li>
+            <li class="mb-2">{% trans "Each group belongs to one sport." %}</li>
+            <li class="mb-0">{% trans "You can set display order to control how groups appear in UI." %}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card admin-card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">{% trans "Group preview" %}</span>
+          <span class="badge rounded-pill bg-info px-3 py-2" id="previewStatus">{% trans "Draft" %}</span>
+        </div>
+        <div class="card-body small">
+          <div class="text-muted">{% trans "Sport" %}</div>
+          <div id="pvSport" class="mb-2">—</div>
+
+          <div class="text-muted">{% trans "Group name" %}</div>
+          <div id="pvName" class="mb-2">—</div>
+
+          <div class="text-muted">{% trans "Order" %}</div>
+          <div id="pvOrder" class="mb-2">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Form -->
+    <div class="col-md-8">
+      <form method="post" {% if form.is_multipart %}enctype="multipart/form-data"{% endif %} novalidate id="pgForm" class="needs-validation">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="card admin-card shadow-sm mb-3">
+          <div class="card-header fw-semibold">{% trans "Details" %}</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.sport.id_for_label }}">
+                  {{ form.sport.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.sport }}
+                {% if form.sport.help_text %}<div class="form-text">{{ form.sport.help_text }}</div>{% endif %}
+                {% for e in form.sport.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.order.id_for_label }}">
+                  {{ form.order.label }}
+                </label>
+                {{ form.order }}
+                {% if form.order.help_text %}<div class="form-text">{{ form.order.help_text }}</div>{% endif %}
+                {% for e in form.order.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+
+              <div class="col-12">
+                <label class="form-label" for="{{ form.name.id_for_label }}">
+                  {{ form.name.label }} <span class="text-danger">*</span>
+                </label>
+                {{ form.name }}
+                {% if form.name.help_text %}<div class="form-text">{{ form.name.help_text }}</div>{% endif %}
+                {% for e in form.name.errors %}<div class="invalid-feedback d-block">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card admin-card shadow-sm">
+          <div class="card-header fw-semibold">{% trans "Action" %}</div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-2">
+              <button class="btn btn-success" type="submit" id="saveBtn">
+                <span class="spinner-border spinner-border-sm me-2 d-none" id="saveSpin" role="status" aria-hidden="true"></span>
+                <i class="bi bi-check2-circle me-1"></i> {% trans "Save group" %}
+              </button>
+              <a class="btn btn-outline-secondary" href="{% url 'players:position_admin' %}">
+                {% trans "Cancel" %}
+              </a>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      {% if form.errors %}
+        <div class="alert alert-danger mt-3">
+          <strong>{% trans "Please fix the errors below." %}</strong>
+          <ul class="mb-0 small">
+            {% for field in form.visible_fields %}
+              {% if field.errors %}
+                <li><strong>{{ field.label }}:</strong> {{ field.errors|join:", " }}</li>
+              {% endif %}
+            {% endfor %}
+            {% if form.non_field_errors %}
+              {% for err in form.non_field_errors %}
+                <li>{{ err }}</li>
+              {% endfor %}
+            {% endif %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% block extra_body %}{% endblock %}
+<script>
+  // Live preview sync
+  (function () {
+    const sportSel = document.getElementById("{{ form.sport.id_for_label }}");
+    const nameInp  = document.getElementById("{{ form.name.id_for_label }}");
+    const orderInp = document.getElementById("{{ form.order.id_for_label }}");
+
+    const pvSport  = document.getElementById("pvSport");
+    const pvName   = document.getElementById("pvName");
+    const pvOrder  = document.getElementById("pvOrder");
+    const pvStatus = document.getElementById("previewStatus");
+
+    const saveBtn  = document.getElementById("saveBtn");
+    const saveSpin = document.getElementById("saveSpin");
+    const form     = document.getElementById("pgForm");
+
+    function getSelectedText(sel) {
+      if (!sel) return null;
+      const i = sel.selectedIndex;
+      return i >= 0 ? sel.options[i].text : null;
+    }
+
+    function tidyAndPreview() {
+      if (nameInp) nameInp.value = nameInp.value.replace(/\s{2,}/g, " ").trimStart();
+      pvSport.textContent = getSelectedText(sportSel) || "—";
+      pvName.textContent  = nameInp && nameInp.value ? nameInp.value : "—";
+      pvOrder.textContent = orderInp && orderInp.value ? orderInp.value : "—";
+
+      const ok = (sportSel && sportSel.value) && (nameInp && nameInp.value.trim());
+      pvStatus.textContent = ok ? "{{ _('Ready') }}" : "{{ _('Draft') }}";
+      pvStatus.classList.remove("bg-info","bg-success");
+      pvStatus.classList.add(ok ? "bg-success" : "bg-info");
+    }
+
+    sportSel   && sportSel.addEventListener("change", tidyAndPreview);
+    nameInp    && nameInp.addEventListener("input", tidyAndPreview);
+    orderInp   && orderInp.addEventListener("input", tidyAndPreview);
+
+    form && form.addEventListener("submit", function () {
+      saveBtn.setAttribute("disabled", "disabled");
+      saveSpin.classList.remove("d-none");
+    });
+
+    tidyAndPreview();
+  })();
+</script>
+{% endblock %}

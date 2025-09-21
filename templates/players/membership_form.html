@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Edit Member{% endblock %}
+{% block content %}
+<div class="container my-5" style="max-width: 720px;">
+  <h2 class="mb-3">Edit Member</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">{{ form.role.label_tag }} {{ form.role }}</div>
+    <div class="mb-3">{{ form.status.label_tag }} {{ form.status }}</div>
+    <div class="mb-3">{{ form.jersey_no.label_tag }} {{ form.jersey_no }}</div>
+    <div class="mb-3">{{ form.primary_position.label_tag }} {{ form.primary_position }}</div>
+    <div class="mb-3">{{ form.secondary_position.label_tag }} {{ form.secondary_position }}</div>
+    <button class="btn btn-primary">Save</button>
+    <a class="btn btn-secondary" href="javascript:history.back()">Cancel</a>
+  </form>
+</div>
+{% endblock %}

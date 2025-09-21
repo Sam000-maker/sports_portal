@@ -10,7 +10,7 @@
     </a>
   </li>
 
-  <!-- Users (lives in accounts namespace) -->
+  <!-- Users -->
   <li class="nav-item">
     <a class="nav-link d-flex align-items-center {% active 'accounts:users_list' %}"
        href="{% url 'accounts:users_list' %}">
@@ -73,5 +73,76 @@
       </a>
     </li>
   {% endif %}
+
+  <!-- Teams & Positions -->
+  <li class="nav-item mt-3">
+    <span class="text-uppercase small text-muted ps-2">Teams & Positions</span>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'players:team_list' %}"
+       href="{% url 'players:team_list' %}">
+      <i class="bi bi-people-fill me-2"></i>
+      <span>Teams</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'players:team_create' %}"
+       href="{% url 'players:team_create' %}">
+      <i class="bi bi-plus-square me-2"></i>
+      <span>Create Team</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'players:position_admin' %}"
+       href="{% url 'players:position_admin' %}">
+      <i class="bi bi-diagram-3 me-2"></i>
+      <span>Positions & Formations</span>
+    </a>
+  </li>
+
+  <!-- Facilities -->
+  <li class="nav-item mt-3">
+    <span class="text-uppercase small text-muted ps-2">Facilities</span>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'facilities:venue_list' %}"
+       href="{% url 'facilities:venue_list' %}">
+      <i class="bi bi-building me-2"></i>
+      <span>Venues</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'facilities:venue_new' %}"
+       href="{% url 'facilities:venue_new' %}">
+      <i class="bi bi-building-add me-2"></i>
+      <span>Add Venue</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'facilities:booking_new' %}"
+       href="{% url 'facilities:booking_new' %}">
+      <i class="bi bi-calendar-plus me-2"></i>
+      <span>New Booking</span>
+    </a>
+  </li>
+
+  <!-- Tournaments -->
+  <li class="nav-item mt-3">
+    <span class="text-uppercase small text-muted ps-2">Tournaments</span>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'tournaments:tournament_list' %}"
+       href="{% url 'tournaments:tournament_list' %}">
+      <i class="bi bi-trophy me-2"></i>
+      <span>All Tournaments</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'tournaments:tournament_new' %}"
+       href="{% url 'tournaments:tournament_new' %}">
+      <i class="bi bi-trophy-fill me-2"></i>
+      <span>Create Tournament</span>
+    </a>
+  </li>
 
 </ul>

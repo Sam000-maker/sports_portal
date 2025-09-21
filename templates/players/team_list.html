@@ -2,7 +2,11 @@
 {% block title %}My Teams{% endblock %}
 {% block content %}
 <div class="container my-5">
-  <h2 class="mb-4">My Teams</h2>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">My Teams</h2>
+    <a href="{% url 'players:team_create' %}" class="btn btn-primary">+ Create Team</a>
+  </div>
+
   {% if teams %}
     <ul class="list-group mb-4">
       {% for team in teams %}
@@ -10,37 +14,33 @@
           <span>
             <a href="{% url 'players:team_detail' team.id %}">{{ team.name }}</a>
             <small class="text-muted">({{ team.sport.name }})</small>
-            {% if team.created_by_id == request.user.id %}
+            {% if team.captain_id == request.user.id %}
               <span class="badge bg-primary ms-2">Captain</span>
-            {% else %}
-              <span class="badge bg-secondary ms-2">Member</span>
+            {% elif team.coach_id == request.user.id %}
+              <span class="badge bg-info text-dark ms-2">Coach</span>
             {% endif %}
           </span>
-          <span class="badge bg-light text-dark">{{ team.memberships.filter(is_approved=True).count }} members</span>
+          <span class="badge bg-light text-dark">{{ team.approved_count }} members</span>
         </li>
       {% endfor %}
     </ul>
   {% else %}
-    <p>You are not a member of any team yet.</p>
+    <div class="alert alert-secondary">You are not a member of any team yet.</div>
   {% endif %}
 
   {% if pending_invites %}
-    <h5 class="mt-3">Team Invitations:</h5>
+    <h5 class="mt-3">Invitations</h5>
     <ul class="list-group">
       {% for inv in pending_invites %}
         <li class="list-group-item d-flex justify-content-between align-items-center">
           <span>{{ inv.team.name }} <small class="text-muted">({{ inv.team.sport.name }})</small></span>
           <form method="post" action="{% url 'players:team_accept' inv.team.id %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-success btn-sm">Accept</button>
+            <button class="btn btn-success btn-sm">Accept</button>
           </form>
         </li>
       {% endfor %}
     </ul>
   {% endif %}
-
-  <div class="mt-4">
-    <a href="{% url 'players:team_create' %}" class="btn btn-primary">+ Create New Team</a>
-  </div>
 </div>
 {% endblock %}

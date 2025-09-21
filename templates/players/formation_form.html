@@ -1,0 +1,202 @@
+{% extends "backoffice/base.html" %}
+{% load i18n static %}
+{% block title %}{{ heading }} · {% if object %}{% trans "Edit" %}{% else %}{% trans "New" %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1080px;">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h2 class="mb-0 fw-semibold">{% if object %}{% trans "Edit" %}{% else %}{% trans "Create" %}{% endif %} {{ heading }}</h2>
+      <small class="text-muted">
+        {% trans "Fill in the details carefully. Fields with" %} <span class="text-danger">*</span> {% trans "are required." %}
+      </small>
+    </div>
+    <div>
+      <a class="btn btn-sm btn-outline-dark" href="{% url 'players:position_admin' %}">
+        <i class="bi bi-arrow-left me-1"></i> {% trans "Back" %}
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-3">
+        <div class="card-header fw-semibold">{% trans "Tips" %}</div>
+        <div class="card-body small">
+          <ul class="mb-0 ps-3">
+            <li class="mb-2">{% trans "Choose the sport first; positions list will be filtered to that sport." %}</li>
+            <li class="mb-2">{% trans "Use Add another row to add counts like DF:4, MF:3, FW:3, GK:1." %}</li>
+            <li class="mb-0 text-muted">{% trans "Counts must be positive integers." %}</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold">{{ heading }} {% trans "preview" %}</span>
+          <span class="badge rounded-pill bg-info px-3 py-2" id="pvStatus">{% trans "Draft" %}</span>
+        </div>
+        <div class="card-body small">
+          <div class="text-muted mb-2">{% trans "Summary" %}</div>
+          <ul id="pvList" class="mb-0 ps-3">
+            <li>{% trans "Start typing to see a preview." %}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger mb-3">{{ form.non_field_errors }}</div>
+      {% endif %}
+
+      <form method="post" id="entity-form" novalidate>
+        {% csrf_token %}
+
+        <div class="card shadow-sm mb-3">
+          <div class="card-header fw-semibold">{{ heading }} {% trans "details" %}</div>
+          <div class="card-body">
+            {% for f in form %}
+              <div class="mb-3">
+                <label class="form-label" for="{{ f.id_for_label }}">
+                  {{ f.label }}{% if f.field.required %} <span class="text-danger">*</span>{% endif %}
+                </label>
+                {{ f }}
+                {% if f.help_text %}<div class="form-text">{{ f.help_text }}</div>{% endif %}
+                {% if f.errors %}<div class="invalid-feedback d-block">{{ f.errors }}</div>{% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+          <div class="card-header fw-semibold">{% trans "Positions in this formation" %}</div>
+          <div class="card-body">
+            {{ formset.management_form }}
+            <div id="rows">
+              {% for fs in formset.forms %}
+                <div class="border rounded p-3 mb-2">
+                  <div class="row g-2">
+                    <div class="col-md-7">
+                      <label class="form-label" for="{{ fs.position.id_for_label }}">{% trans "Position" %}</label>
+                      {{ fs.position }}
+                      {% if fs.position.errors %}<div class="invalid-feedback d-block">{{ fs.position.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-3">
+                      <label class="form-label" for="{{ fs.count.id_for_label }}">{% trans "Count" %}</label>
+                      {{ fs.count }}
+                      {% if fs.count.errors %}<div class="invalid-feedback d-block">{{ fs.count.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                      {% if formset.can_delete %}
+                        <div class="form-check">
+                          {{ fs.DELETE }} <label class="form-check-label">{% trans "Delete" %}</label>
+                        </div>
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% for hf in fs.hidden_fields %}{{ hf }}{% endfor %}
+                </div>
+              {% endfor %}
+            </div>
+            {% if formset.non_form_errors %}
+              <div class="alert alert-danger small">{{ formset.non_form_errors }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button id="save-btn" class="btn btn-primary" type="submit">
+            <span class="spinner-border spinner-border-sm me-2 d-none" id="save-spinner" role="status" aria-hidden="true"></span>
+            {% if object %}{% trans "Save changes" %}{% else %}{% trans "Create formation" %}{% endif %}
+          </button>
+          <a class="btn btn-outline-secondary" href="{% url 'players:position_admin' %}">{% trans "Cancel" %}</a>
+        </div>
+      </form>
+
+      {% if form.errors or formset.total_error_count %}
+        <div class="alert alert-danger mt-3">
+          <strong>{% trans "Please fix the errors below." %}</strong>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+  {% trans "Yes" as YES %}
+  {% trans "No" as NO %}
+  {% trans "Draft" as DRAFT %}
+  {% trans "Ready" as READY %}
+  {% trans "Nothing to preview yet." as NOTHING %}
+
+  (function () {
+    const I18N = {
+      yes: "{{ YES|escapejs }}",
+      no: "{{ NO|escapejs }}",
+      draft: "{{ DRAFT|escapejs }}",
+      ready: "{{ READY|escapejs }}",
+      nothing: "{{ NOTHING|escapejs }}"
+    };
+
+    const form = document.getElementById('entity-form');
+    const btn  = document.getElementById('save-btn');
+    const spn  = document.getElementById('save-spinner');
+    if (form && btn && spn) {
+      form.addEventListener('submit', function () {
+        btn.setAttribute('disabled', 'disabled');
+        spn.classList.remove('d-none');
+      });
+    }
+
+    const pvList   = document.getElementById('pvList');
+    const pvStatus = document.getElementById('pvStatus');
+
+    function nodes() {
+      return Array.from(document.querySelectorAll('#entity-form input, #entity-form select, #entity-form textarea'))
+        .filter(el => el.name && !el.name.startsWith('csrf') && el.type !== 'hidden');
+    }
+    function labelFor(el) {
+      const lab = document.querySelector(`label[for="${el.id}"]`);
+      return (lab ? lab.textContent : el.name).replace(/\*$/, '').trim();
+    }
+    function displayValue(el) {
+      if (el.type === 'checkbox') return el.checked ? I18N.yes : I18N.no;
+      if (el.tagName === 'SELECT') {
+        const i = el.selectedIndex;
+        return i >= 0 ? (el.options[i].text || '—') : '—';
+      }
+      const v = (el.value || '').trim();
+      return v || '—';
+    }
+    function anyRequiredMissing(ns) {
+      return ns.some(el => el.required && (el.type === 'checkbox' ? !el.checked : !(el.value || '').trim()));
+    }
+    function updatePreview() {
+      const ns = nodes();
+      pvList.innerHTML = '';
+      if (!ns.length) {
+        pvList.innerHTML = `<li>${I18N.nothing}</li>`;
+      } else {
+        ns.forEach(el => {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>${labelFor(el)}:</strong> ${displayValue(el)}`;
+          pvList.appendChild(li);
+        });
+      }
+      pvStatus.classList.remove('bg-info', 'bg-success');
+      if (anyRequiredMissing(ns)) {
+        pvStatus.textContent = I18N.draft;
+        pvStatus.classList.add('bg-info');
+      } else {
+        pvStatus.textContent = I18N.ready;
+        pvStatus.classList.add('bg-success');
+      }
+    }
+    document.addEventListener('input', e => { if (e.target && e.target.closest('#entity-form')) updatePreview(); });
+    document.addEventListener('change', e => { if (e.target && e.target.closest('#entity-form')) updatePreview(); });
+    updatePreview();
+  })();
+</script>
+{% endblock %}

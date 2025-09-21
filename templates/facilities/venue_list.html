@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Venues{% endblock %}
+{% block content %}
+<div class="container my-5">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="mb-0">Venues</h2>
+    {% if request.user.is_staff or request.user.role in "admin staff coach" %}
+      <a class="btn btn-primary" href="{% url 'facilities:venue_new' %}">+ New Venue</a>
+    {% endif %}
+  </div>
+  <div class="row g-3">
+    {% for v in venues %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+          {% with photo=v.photos.first %}
+            {% if photo %}
+              <img src="{{ photo.image.url }}" alt="{{ v.name }}" class="card-img-top" style="object-fit:cover;height:180px;">
+            {% endif %}
+          {% endwith %}
+          <div class="card-body">
+            <h5 class="card-title"><a href="{% url 'facilities:venue_detail' v.id %}">{{ v.name }}</a></h5>
+            <p class="card-text text-muted">{{ v.venue_type|default:"—" }}</p>
+            <div class="small text-muted">{{ v.location_note }}</div>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12"><div class="alert alert-secondary">No venues yet.</div></div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

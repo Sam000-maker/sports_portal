@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Add Team{% endblock %}
+{% block content %}
+<div class="container my-5" style="max-width:640px;">
+  <h2 class="mb-3">Add Team</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">{{ form.team.label_tag }} {{ form.team }}</div>
+    <div class="mb-3">{{ form.seed.label_tag }} {{ form.seed }}</div>
+    <button class="btn btn-primary">Add</button>
+    <a class="btn btn-secondary" href="javascript:history.back()">Cancel</a>
+  </form>
+</div>
+{% endblock %}

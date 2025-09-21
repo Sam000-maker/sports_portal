@@ -1,20 +1,21 @@
 {% extends "base.html" %}
 {% block title %}Create Team{% endblock %}
 {% block content %}
-<div class="container my-5">
-  <h2 class="mb-4">Create a New Team</h2>
+<div class="container my-5" style="max-width: 720px;">
+  <h2 class="mb-3">Create Team</h2>
   <form method="post">
     {% csrf_token %}
-    {% for field in form %}
-      <div class="mb-3">
-        {{ field.label_tag }}  
-        {{ field }}  
-        {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
-        {% for error in field.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
-      </div>
-    {% endfor %}
-    <button type="submit" class="btn btn-primary">Create Team</button>
+    {{ form.non_field_errors }}
+    <div class="mb-3">{{ form.sport.label_tag }} {{ form.sport }}</div>
+    <div class="mb-3">{{ form.name.label_tag }} {{ form.name }}</div>
+    <div class="mb-3">{{ form.coach.label_tag }} {{ form.coach }}</div>
+    <div class="mb-3">{{ form.captain.label_tag }} {{ form.captain }}</div>
+    <div class="mb-3">
+      {{ form.home_venues.label_tag }} {{ form.home_venues }}
+      <div class="form-text">Hold Ctrl to select multiple preferred venues.</div>
+    </div>
+    <button class="btn btn-primary">Save</button>
+    <a class="btn btn-secondary" href="{% url 'players:team_list' %}">Cancel</a>
   </form>
 </div>
 {% endblock %}
-

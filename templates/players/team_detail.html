@@ -1,53 +1,85 @@
 {% extends "base.html" %}
-{% block title %}Team {{ team.name }}{% endblock %}
+{% block title %}Team · {{ team.name }}{% endblock %}
 {% block content %}
 <div class="container my-5">
-  <h2 class="mb-4">{{ team.name }} <small class="text-muted">({{ team.sport.name }})</small></h2>
-  {% if messages %}
-    {% for msg in messages %}
-      <div class="alert alert-{{ msg.tags }}">{{ msg }}</div>
-    {% endfor %}
-  {% endif %}
-
-  <p><strong>Captain:</strong> {{ team.created_by.username }}</p>
-
-  <h5>Members:</h5>
-  <ul>
-    {% for m in members %}
-      <li>{{ m.user.username }}{% if m.user_id == team.created_by_id %} <em>(Captain)</em>{% endif %}</li>
-    {% endfor %}
-  </ul>
-
-  {% if pending_invites and request.user == team.created_by %}
-    <h5>Pending Invitations:</h5>
-    <ul>
-      {% for inv in pending_invites %}
-        <li>{{ inv.user.username }} (Invited)</li>
-      {% endfor %}
-    </ul>
-  {% endif %}
-
-  {% if invite_form %}
-    <hr>
-    <h5>Invite a Player:</h5>
-    <form method="post">
-      {% csrf_token %}
-      <div class="mb-3">
-        {{ invite_form.user.label_tag }}  
-        {{ invite_form.user }}
-        {% for error in invite_form.user.errors %}<div class="text-danger">{{ error }}</div>{% endfor %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h2 class="mb-0">{{ team.name }}</h2>
+      <div class="text-muted">
+        {{ team.sport.name }} · Coach: {{ team.coach|default:"—" }} · Captain: {{ team.captain|default:"—" }}
       </div>
-      <button type="submit" class="btn btn-secondary">Send Invite</button>
-    </form>
-  {% endif %}
+    </div>
+    {% if can_manage %}
+      <a href="{% url 'players:position_admin' %}" class="btn btn-outline-secondary btn-sm">Positions & formations</a>
+    {% endif %}
+  </div>
 
-  {% if user_invited %}
-    <hr>
-    <form method="post" action="{% url 'players:team_accept' team.id %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-success">Accept Invitation</button>
-      {# For decline, one could implement a similar form to remove the invite #}
-    </form>
-  {% endif %}
+  <div class="row g-3">
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header">Active Roster</div>
+        <ul class="list-group list-group-flush">
+          {% for m in members %}
+            <li class="list-group-item d-flex justify-content-between">
+              <span>
+                {% if m.jersey_no %}<strong>#{{ m.jersey_no }}</strong> {% endif %}
+                {{ m.user.get_full_name|default:m.user.username }}
+                <small class="text-muted">
+                  {% if m.primary_position %} · {{ m.primary_position.code }}{% endif %}
+                  {% if m.secondary_position %} , {{ m.secondary_position.code }}{% endif %}
+                </small>
+              </span>
+              {% if can_manage %}
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'players:membership_edit' m.id %}">Edit</a>
+              {% endif %}
+            </li>
+          {% empty %}
+            <li class="list-group-item">No active members yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card mb-3">
+        <div class="card-header">Pending Invitations</div>
+        <div class="card-body">
+          {% if pending %}
+            <ul class="list-unstyled mb-3">
+              {% for p in pending %}
+                <li>{{ p.user }} <span class="text-muted">(pending)</span></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-muted">No pending invites.</div>
+          {% endif %}
+          {% if invite_form %}
+            <form method="post">
+              {% csrf_token %}
+              <div class="input-group">
+                {{ invite_form.user }}
+                <button class="btn btn-primary">Invite</button>
+              </div>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Home Venues</div>
+        <div class="card-body">
+          {% if team.home_venues.all %}
+            <ul class="list-unstyled mb-0">
+              {% for v in team.home_venues.all %}
+                <li>{{ v.name }} <small class="text-muted">· {{ v.venue_type|default:"—" }}</small></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-muted">No preferred venues selected.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

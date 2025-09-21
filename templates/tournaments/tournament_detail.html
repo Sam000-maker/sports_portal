@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Tournament · {{ tournament.name }}{% endblock %}
+{% block content %}
+<div class="container my-5">
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+      <h2 class="mb-0">{{ tournament.name }}</h2>
+      <div class="text-muted">
+        {{ tournament.sport.name }} · {{ tournament.get_ttype_display }} · {{ tournament.start_date }} → {{ tournament.end_date }}
+      </div>
+    </div>
+    {% if can_manage %}
+      <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'tournaments:tournament_edit' tournament.id %}">Edit</a>
+        <form method="post" action="{% url 'tournaments:tournament_delete' tournament.id %}" onsubmit="return confirm('Delete this tournament? This cannot be undone.');">
+          {% csrf_token %}
+          <button class="btn btn-outline-danger btn-sm" type="submit">Delete</button>
+        </form>
+        <form method="post" action="{% url 'tournaments:tournament_generate' tournament.id %}">
+          {% csrf_token %}
+          <button class="btn btn-outline-primary btn-sm">Generate Fixtures</button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-5">
+      <div class="card">
+        <div class="card-header">Teams</div>
+        <div class="card-body">
+          {% if can_manage %}
+            <form method="post" action="{% url 'tournaments:tournament_team_add' tournament.id %}" class="d-flex flex-wrap align-items-center gap-2">
+              {% csrf_token %}
+              {{ form.team }} {{ form.seed }}
+              <button class="btn btn-sm btn-primary">Add</button>
+            </form>
+          {% endif %}
+          <ul class="list-group list-group-flush mt-3">
+            {% for tt in teams %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <span>{{ tt.team.name }}</span>
+                  <small class="text-muted ms-2">seed {{ tt.seed|default:"—" }}</small>
+                </div>
+                {% if can_manage %}
+                  <form method="post" action="{% url 'tournaments:tournament_team_remove' tournament.id tt.id %}">
+                    {% csrf_token %}
+                    <button class="btn btn-sm btn-outline-danger">Remove</button>
+                  </form>
+                {% endif %}
+              </li>
+            {% empty %}
+              <li class="list-group-item">No teams yet.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-7">
+      <div class="card">
+        <div class="card-header">Matches</div>
+        <ul class="list-group list-group-flush">
+          {% for m in matches %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ m.team_a.name }}</strong> vs <strong>{{ m.team_b.name }}</strong>
+                  <small class="text-muted">R{{ m.round_no }}{% if m.group_label %} · Group {{ m.group_label }}{% endif %}</small>
+                  <div class="small text-muted">When: {{ m.scheduled_at|default:"—" }} · Venue: {{ m.venue|default:"—" }}</div>
+                </div>
+                {% if can_manage %}
+                  <div class="btn-group">
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'tournaments:match_schedule' m.id %}">Schedule</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'tournaments:lineup_build' m.id 'a' %}">Lineup A</a>
+                    <a class="btn btn-sm btn-outline-secondary" href="{% url 'tournaments:lineup_build' m.id 'b' %}">Lineup B</a>
+                    <a class="btn btn-sm btn-outline-primary" href="{% url 'tournaments:match_result' m.id %}">Result</a>
+                    <form method="post" action="{% url 'tournaments:match_delete' m.id %}" onsubmit="return confirm('Delete this match?');">
+                      {% csrf_token %}
+                      <button class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                  </div>
+                {% endif %}
+              </div>
+            </li>
+          {% empty %}
+            <li class="list-group-item">No matches yet.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
