@@ -8,7 +8,7 @@
     <h2 class="mb-0 fw-semibold">
       {% if request.user.is_staff %}All Applications{% else %}My Applications{% endif %}
     </h2>
-    <small class="text-muted">
+    <small class="text-muted d-block">
       {% if is_paginated %}
         Showing {{ object_list|length }} of {{ page_obj.paginator.count }}
       {% else %}
@@ -18,21 +18,25 @@
 
     {# Applied filter summary (appears only when something is filtered) #}
     {% if request.GET.sport or request.GET.status or request.GET.cycle_id %}
-      <div class="mt-2">
+      <div class="mt-2" aria-live="polite">
         {% if request.GET.sport %}
           <span class="badge rounded-pill text-bg-light me-1">
             Sport: <strong class="ms-1">{{ request.GET.sport }}</strong>
           </span>
         {% endif %}
+
         {% if request.GET.status %}
           <span class="badge rounded-pill text-bg-light me-1">
             Status: <strong class="ms-1">
               {% for key, label in object_list.model.Status.choices %}
-                {% if key|stringformat:"s" == request.GET.status|stringformat:"s" %}{{ label }}{% endif %}
+                {% if key|stringformat:"s" == request.GET.status|stringformat:"s" %}
+                  {{ label }}
+                {% endif %}
               {% endfor %}
             </strong>
           </span>
         {% endif %}
+
         {% if request.GET.cycle_id %}
           <span class="badge rounded-pill text-bg-light me-1">
             Cycle: <strong class="ms-1">
@@ -46,7 +50,8 @@
             </strong>
           </span>
         {% endif %}
-        <a class="badge rounded-pill text-bg-secondary text-decoration-none" href="?">
+
+        <a class="badge rounded-pill text-bg-secondary text-decoration-none" href="?" aria-label="Clear all filters">
           Clear filters
         </a>
       </div>
@@ -69,8 +74,7 @@
     <div class="card-header d-flex align-items-center justify-content-between">
       <span class="fw-semibold">Filters</span>
       {# Quick status chips #}
-      <div class="d-none d-md-flex gap-1">
-        {# Build links that keep current sport/cycle filters #}
+      <div class="d-none d-md-flex flex-wrap gap-1">
         {% with s=request.GET.sport c=request.GET.cycle_id %}
           <a class="badge rounded-pill text-bg-light text-decoration-none"
              href="?status=&{% if s %}sport={{ s|urlencode }}&{% endif %}{% if c %}cycle_id={{ c }}{% endif %}">
@@ -95,6 +99,7 @@
         {% endwith %}
       </div>
     </div>
+
     <div class="card-body">
       <form method="get" class="row g-2" role="search" aria-label="Application filters">
         <div class="col-md-4">
@@ -159,6 +164,7 @@
             <th scope="col" class="text-end">Action</th>
           </tr>
         </thead>
+
         <tbody>
           {% for app in object_list %}
             <tr>
@@ -215,7 +221,9 @@
                 {% endwith %}
               </td>
 
-              <td class="text-muted small d-none d-md-table-cell">{{ app.submitted_at|date:"Y-m-d H:i" }}</td>
+              <td class="text-muted small d-none d-md-table-cell">
+                {{ app.submitted_at|date:"Y-m-d H:i" }}
+              </td>
 
               <td class="text-end">
                 <a class="btn btn-sm btn-outline-primary"
@@ -228,7 +236,7 @@
             <tr>
               <td colspan="{% if request.user.is_staff %}8{% else %}7{% endif %}" class="text-center text-muted py-5">
                 <div class="py-2">
-                  <i class="bi bi-inbox display-6 d-block mb-2"></i>
+                  <i class="bi bi-inbox display-6 d-block mb-2" aria-hidden="true"></i>
                   <em>No applications found.</em>
                 </div>
                 {% if not request.user.is_staff %}
@@ -256,9 +264,11 @@
           </a>
         </li>
       {% endif %}
+
       <li class="page-item disabled">
         <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
       </li>
+
       {% if page_obj.has_next %}
         <li class="page-item">
           <a class="page-link"

@@ -1,7 +1,9 @@
+# tournaments/views.py
 from __future__ import annotations
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils.decorators import method_decorator
@@ -21,6 +23,8 @@ def is_admin_like(user) -> bool:
 
 
 class AdminCoachRequired(LoginRequiredMixin, UserPassesTestMixin):
+    raise_exception = True  # 403 instead of loop to login
+
     def test_func(self):
         return is_admin_like(self.request.user)
 
@@ -31,6 +35,7 @@ class TournamentListView(LoginRequiredMixin, ListView):
     model = Tournament
     template_name = "tournaments/tournament_list.html"
     context_object_name = "tournaments"
+    paginate_by = 20
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
@@ -65,13 +70,11 @@ class TournamentUpdateView(AdminCoachRequired, UpdateView):
 class TournamentDeleteView(AdminCoachRequired, View):
     def post(self, request, pk):
         t = get_object_or_404(Tournament, pk=pk)
-
-        # If you ever want to block deletion once started, uncomment:
+        # Guard example if you want to block deletion after start:
         # from django.utils import timezone
         # if t.start_date and t.start_date <= timezone.localdate():
         #     messages.error(request, "Started tournaments cannot be deleted.")
         #     return redirect("tournaments:tournament_list")
-
         t.delete()
         messages.success(request, "Tournament deleted.")
         return redirect("tournaments:tournament_list")
@@ -96,7 +99,6 @@ class TournamentDetailView(LoginRequiredMixin, DetailView):
             .order_by("round_no", "group_label", "id")
         )
         if is_admin_like(self.request.user):
-            # Provide the add-team form the template expects
             ctx["form"] = TournamentTeamForm(tournament=t)
         ctx["can_manage"] = is_admin_like(self.request.user)
         return ctx
@@ -134,10 +136,14 @@ class TournamentGenerateFixturesView(AdminCoachRequired, View):
     def post(self, request, pk):
         t = get_object_or_404(Tournament, pk=pk)
         if TournamentTeam.objects.filter(tournament=t).count() < 2:
-            messages.error(request, "You need at least 2 teams to generate fixtures.")
+            messages.error(self.request, "You need at least 2 teams to generate fixtures.")
             return redirect("tournaments:tournament_detail", pk=pk)
-        generate_fixtures(t)
-        messages.success(request, "Fixtures generated.")
+        try:
+            generate_fixtures(t)
+        except Exception as e:
+            messages.error(self.request, f"Could not generate fixtures: {e}")
+        else:
+            messages.success(self.request, "Fixtures generated.")
         return redirect("tournaments:tournament_detail", pk=pk)
 
 
@@ -165,18 +171,23 @@ class MatchScheduleView(AdminCoachRequired, FormView):
         # Auto-create a facility booking for a 2-hour slot
         if m.venue and m.scheduled_at:
             from datetime import timedelta
+
             start = m.scheduled_at
             end = start + timedelta(hours=2)
+
+            defaults = {"created_by": self.request.user, "purpose": f"Match {m.id}"}
+            # Prefer FK if your Booking model has it (we added facilities.0003)
+            if hasattr(Booking, "tournament_match"):
+                defaults["tournament_match"] = m
+
+            # Rely on unique (venue, start, end) in Booking
             Booking.objects.get_or_create(
                 venue=m.venue,
                 start=start,
                 end=end,
-                defaults={
-                    "created_by": self.request.user,
-                    "purpose": f"Match {m.id}",
-                    "tournament_match_id": m.id,
-                },
+                defaults=defaults,
             )
+
         messages.success(self.request, "Match scheduled and venue booked.")
         return redirect("tournaments:tournament_detail", pk=m.tournament_id)
 
@@ -190,6 +201,10 @@ class LineupBuildView(AdminCoachRequired, FormView):
     def dispatch(self, request, *args, **kwargs):
         self.match = get_object_or_404(Match, pk=kwargs["match_id"])
         self.team_side = kwargs["side"]  # "a" or "b"
+        if self.team_side not in {"a", "b"}:
+            messages.error(self.request, "Invalid team side.")
+            return redirect("tournaments:tournament_detail", pk=self.match.tournament_id)
+
         team = self.match.team_a if self.team_side == "a" else self.match.team_b
         self.lineup, _ = Lineup.objects.get_or_create(match=self.match, team=team)
         return super().dispatch(request, *args, **kwargs)
@@ -200,7 +215,6 @@ class LineupBuildView(AdminCoachRequired, FormView):
         return kw
 
     def get_context_data(self, **kwargs):
-        """Give the template the stuff it needs to render without crying."""
         ctx = super().get_context_data(**kwargs)
         ctx["match"] = self.match
         ctx["lineup"] = self.lineup
@@ -215,8 +229,13 @@ class LineupBuildView(AdminCoachRequired, FormView):
     def form_valid(self, form):
         entry = form.save(commit=False)
         entry.lineup = self.lineup
-        entry.save()
-        messages.success(self.request, "Player added to lineup.")
+        try:
+            with transaction.atomic():
+                entry.save()
+        except IntegrityError:
+            messages.error(self.request, "That player is already in this lineup.")
+        else:
+            messages.success(self.request, "Player added to lineup.")
         return redirect("tournaments:tournament_detail", pk=self.match.tournament_id)
 
 
@@ -226,7 +245,7 @@ class LineupEntryRemoveView(AdminCoachRequired, View):
         match = get_object_or_404(Match, pk=match_id)
         entry = get_object_or_404(LineupEntry, pk=entry_id, lineup__match=match)
         entry.delete()
-        messages.success(request, "Player removed from lineup.")
+        messages.success(self.request, "Player removed from lineup.")
         return redirect("tournaments:tournament_detail", pk=match.tournament_id)
 
 

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ venue.name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1100px;">
+
+
+
+  <!-- Title row -->
+  <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3">
+    <div>
+      <h2 class="mb-2 fw-semibold">{{ venue.name }}</h2>
+      <div class="text-muted small d-flex align-items-center flex-wrap gap-2">
+        <span class="badge text-bg-light border">
+          <i class="bi bi-geo-alt me-1"></i>{{ venue.location_note|default:"Location N/A" }}
+        </span>
+        <span class="badge text-bg-light border">
+          <i class="bi bi-columns-gap me-1"></i>{{ venue.venue_type|default:"Type N/A" }}
+        </span>
+        <span class="badge text-bg-light border">
+          <i class="bi bi-people me-1"></i>Capacity: {{ venue.capacity|default:"—" }}
+        </span>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'facilities:my_booking_list' %}">
+        <i class="bi bi-calendar2-check me-1"></i> My bookings
+      </a>
+      <a class="btn btn-outline-dark btn-sm" href="{% url 'facilities:venue_list' %}">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Upcoming bookings -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <span class="fw-semibold"><i class="bi bi-clock-history me-2"></i>Upcoming bookings</span>
+          <span class="text-muted small">{{ upcoming_bookings|length }} total</span>
+        </div>
+        <div class="card-body p-0">
+          {% if upcoming_bookings %}
+            <div class="list-group list-group-flush">
+              {% for b in upcoming_bookings %}
+                <div class="list-group-item">
+                  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                      <div class="fw-semibold">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        {{ b.start|date:"D, M j · H:i" }}
+                        <span class="text-muted">→</span>
+                        {{ b.end|date:"D, M j · H:i" }}
+                      </div>
+                      <div class="small text-muted">
+                        {{ b.purpose|default:"(no purpose)" }}
+                      </div>
+                    </div>
+                    <span class="badge rounded-pill text-bg-light border small">
+                      <i class="bi bi-person-badge me-1"></i>
+                      {{ b.created_by.get_full_name|default:b.created_by.username }}
+                    </span>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="p-4 text-center text-muted">
+              <i class="bi bi-calendar-x fs-3 d-block mb-2"></i>
+              <div class="fw-semibold">No bookings yet</div>
+              <div class="small">Be the first to reserve this venue using the form →</div>
+            </div>
+          {% endif %}
+        </div>
+        <div class="card-footer small text-muted">
+          Times are shown in your local timezone.
+        </div>
+      </div>
+    </div>
+
+    <!-- Booking form -->
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header fw-semibold">
+          <i class="bi bi-plus-square me-2"></i>Book this venue
+        </div>
+        <div class="card-body">
+          <form method="post" action="{% url 'facilities:booking_new' %}" novalidate>
+            {% csrf_token %}
+
+            {% if booking_form.non_field_errors %}
+              <div class="alert alert-danger py-2 small">
+                {{ booking_form.non_field_errors }}
+              </div>
+            {% endif %}
+
+            <!-- Venue (hidden, prefilled) -->
+            {{ booking_form.venue.as_hidden }}
+            <div class="mb-3">
+              <label class="form-label small text-muted mb-0">Venue</label>
+              <div class="form-control-plaintext fw-semibold">{{ venue.name }}</div>
+            </div>
+
+            <!-- Start -->
+            <div class="mb-3">
+              <label for="{{ booking_form.start.id_for_label }}" class="form-label">
+                Start <span class="text-danger">*</span>
+              </label>
+              {{ booking_form.start }}
+              {% if booking_form.start.errors %}
+                <div class="invalid-feedback d-block">{{ booking_form.start.errors|striptags }}</div>
+              {% else %}
+                <div class="form-text">Pick a start date & time.</div>
+              {% endif %}
+            </div>
+
+            <!-- End -->
+            <div class="mb-3">
+              <label for="{{ booking_form.end.id_for_label }}" class="form-label">
+                End <span class="text-danger">*</span>
+              </label>
+              {{ booking_form.end }}
+              {% if booking_form.end.errors %}
+                <div class="invalid-feedback d-block">{{ booking_form.end.errors|striptags }}</div>
+              {% else %}
+                <div class="form-text">End should be after Start.</div>
+              {% endif %}
+            </div>
+
+            <!-- Purpose -->
+            <div class="mb-3">
+              <label for="{{ booking_form.purpose.id_for_label }}" class="form-label">
+                Purpose
+                <i class="bi bi-info-circle ms-1 text-muted" data-bs-toggle="tooltip"
+                   title="Eg: Team practice, tournament match, department event"></i>
+              </label>
+              {{ booking_form.purpose }}
+              {% if booking_form.purpose.errors %}
+                <div class="invalid-feedback d-block">{{ booking_form.purpose.errors|striptags }}</div>
+              {% else %}
+                <div class="form-text">Optional, but helps managers understand usage.</div>
+              {% endif %}
+            </div>
+
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary">
+                <i class="bi bi-check2-circle me-1"></i>Create booking
+              </button>
+              <a class="btn btn-outline-secondary" href="{% url 'facilities:my_booking_list' %}">
+                View my bookings
+              </a>
+            </div>
+          </form>
+        </div>
+        <div class="card-footer small text-muted">
+          Submitting a request doesn’t guarantee approval. Conflicts will be validated server-side.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page helpers (optional) -->
+<script>
+  // Tiny UX guard: if your widgets are datetime-local, prevent past start times
+  (function () {
+    const start = document.getElementById('{{ booking_form.start.id_for_label }}');
+    const end = document.getElementById('{{ booking_form.end.id_for_label }}');
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
+
+    if (start && start.type === 'datetime-local') {
+      const now = new Date();
+      const pad = n => String(n).padStart(2,'0');
+      const min = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) +
+                  'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+      start.min = min;
+      start.addEventListener('change', () => { if (end && !end.value) end.value = start.value; });
+    }
+  }());
+</script>
+{% endblock %}

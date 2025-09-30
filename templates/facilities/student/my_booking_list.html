@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}My Bookings{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1100px;">
+
+
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+      <h2 class="mb-0 fw-semibold">My Bookings</h2>
+      <div class="text-muted small">Your reservations, neatly arranged.</div>
+    </div>
+    <a class="btn btn-primary btn-sm" href="{% url 'facilities:booking_new' %}">
+      <i class="bi bi-calendar-plus me-1"></i> New Booking
+    </a>
+  </div>
+
+  {% if bookings %}
+    <div class="row g-3">
+      {% for b in bookings %}
+        <div class="col-md-6 col-lg-4">
+          <div class="card shadow-sm h-100 border-0">
+
+            {# Cover: first photo or placeholder #}
+            {% with p=b.venue.photos.all|first %}
+              {% if p and p.image %}
+                <a href="{% url 'facilities:venue_detail' b.venue_id %}">
+                  <img src="{{ p.image.url }}"
+                       class="card-img-top"
+                       alt="{{ p.caption|default:b.venue.name }}"
+                       style="height: 180px; object-fit: cover;">
+                </a>
+              {% else %}
+                <a href="{% url 'facilities:venue_detail' b.venue_id %}">
+                  <div class="ratio ratio-16x9 bg-light d-flex align-items-center justify-content-center border-bottom">
+                    <i class="bi bi-image text-muted" style="font-size: 2rem;"></i>
+                  </div>
+                </a>
+              {% endif %}
+            {% endwith %}
+
+            <div class="card-body">
+              <h5 class="card-title mb-1">
+                <a class="text-decoration-none" href="{% url 'facilities:venue_detail' b.venue_id %}">
+                  {{ b.venue.name }}
+                </a>
+              </h5>
+
+              <div class="small text-muted">
+                <i class="bi bi-calendar-event me-1"></i>
+                {{ b.start|date:"D, M j · H:i" }} – {{ b.end|date:"H:i" }}
+                <span class="ms-2">· {{ b.end|timesince:b.start }}</span>
+              </div>
+
+              {% if b.purpose %}
+                <div class="mt-2">
+                  <span class="badge text-bg-light border small">
+                    <i class="bi bi-flag me-1"></i>{{ b.purpose }}
+                  </span>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="card-footer bg-white d-flex align-items-center justify-content-between small">
+              <span class="text-muted">Local time</span>
+              <div class="d-flex gap-2">
+                <a class="text-decoration-none" href="{% url 'facilities:venue_detail' b.venue_id %}">
+                  Details <i class="bi bi-arrow-right-short"></i>
+                </a>
+                {# Optional: if you add a cancel/edit URL later, pop it in here #}
+                {# <a class="text-decoration-none" href="{% url 'facilities:booking_edit' b.pk %}">Edit</a> #}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card shadow-sm border-0">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-calendar-x fs-1 text-muted d-block mb-3"></i>
+        <h5 class="fw-semibold mb-1">No bookings yet</h5>
+        <p class="text-muted mb-3">When you make reservations, they’ll appear here.</p>
+        <a href="{% url 'facilities:booking_new' %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-calendar-plus me-1"></i> Create a booking
+        </a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

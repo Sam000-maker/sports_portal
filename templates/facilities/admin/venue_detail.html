@@ -1,0 +1,124 @@
+{% extends "backoffice/base.html" %}
+{% block title %}{{ venue.name }} · Admin{% endblock %}
+
+{% block content %}
+<div class="container my-5" style="max-width: 1200px;">
+
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h2 class="mb-0 fw-semibold">
+        {{ venue.name }}
+        {% if venue.is_active %}
+          <span class="badge bg-success ms-2">Active</span>
+        {% else %}
+          <span class="badge bg-secondary ms-2">Inactive</span>
+        {% endif %}
+      </h2>
+      <div class="text-muted small">
+        {{ venue.venue_type|default:"Type N/A" }} · Capacity: {{ venue.capacity|default:"—" }}
+        {% if venue.location_note %} · {{ venue.location_note }}{% endif %}
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <form method="post" action="{% url 'facilities:venue_toggle_active' venue.pk %}">
+        {% csrf_token %}
+        <button class="btn btn-outline-warning btn-sm" type="submit">
+          {% if venue.is_active %}<i class="bi bi-pause-circle me-1"></i> Set Inactive
+          {% else %}<i class="bi bi-play-circle me-1"></i> Set Active{% endif %}
+        </button>
+      </form>
+      <a class="btn btn-primary btn-sm" href="{% url 'facilities:booking_new' %}">
+        <i class="bi bi-calendar-plus me-1"></i> New Booking
+      </a>
+      <a class="btn btn-outline-primary btn-sm" href="{% url 'facilities:booking_list_admin' %}">
+        <i class="bi bi-list-check me-1"></i> All bookings
+      </a>
+      <a class="btn btn-outline-dark btn-sm" href="{% url 'facilities:venue_list' %}">
+        <i class="bi bi-arrow-left me-1"></i> Back
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Upcoming bookings -->
+    <div class="col-lg-6">
+      <h5 class="mb-3">Upcoming bookings ({{ upcoming_bookings|length }})</h5>
+      {% if upcoming_bookings %}
+        <div class="list-group">
+          {% for b in upcoming_bookings %}
+            <div class="list-group-item small d-flex justify-content-between align-items-center gap-3">
+              <div class="flex-grow-1">
+                <div>
+                  <i class="bi bi-calendar-event me-1"></i>
+                  {{ b.start|date:"D, M j · H:i" }} → {{ b.end|date:"H:i" }}
+                  <span class="text-muted">· {{ b.end|timesince:b.start }}</span>
+                </div>
+                <div class="text-muted">
+                  {{ b.purpose|default:"(no purpose)" }}
+                  {% if b.created_by %} · by {{ b.created_by.get_full_name|default:b.created_by.username }}{% endif %}
+                </div>
+              </div>
+
+              <div class="d-flex align-items-center gap-2">
+                {% if b.status == "PENDING" %}
+                  <span class="badge bg-warning-subtle text-warning-emphasis border">Pending</span>
+                  <form method="post" action="{% url 'facilities:booking_approve' b.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="btn btn-success btn-sm">Approve</button>
+                  </form>
+                  <form method="post" action="{% url 'facilities:booking_reject' b.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="btn btn-outline-danger btn-sm">Reject</button>
+                  </form>
+                {% elif b.status == "APPROVED" %}
+                  <span class="badge bg-success">Approved</span>
+                {% elif b.status == "REJECTED" %}
+                  <span class="badge bg-danger">Rejected</span>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-secondary small mb-0">
+          No bookings yet. <a href="{% url 'facilities:booking_new' %}" class="alert-link">Create one</a>.
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Photos -->
+    <div class="col-lg-6">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Photos ({{ venue.photos.all|length }})</h5>
+        <a class="btn btn-sm btn-primary" href="{% url 'facilities:venue_photo_new' venue.pk %}">
+          <i class="bi bi-plus-circle me-1"></i>Add Photo
+        </a>
+      </div>
+      {% if venue.photos.all %}
+        <div class="list-group">
+          {% for p in venue.photos.all %}
+            <div class="list-group-item small d-flex gap-3 align-items-center">
+              {% if p.image %}
+                <img src="{{ p.image.url }}" alt="{{ p.caption|default:venue.name }}"
+                     style="width:70px; height:50px; object-fit:cover;" class="rounded border">
+              {% else %}
+                <div class="d-flex align-items-center justify-content-center bg-light rounded border"
+                     style="width:70px; height:50px;">
+                  <i class="bi bi-image text-muted"></i>
+                </div>
+              {% endif %}
+              <div class="flex-grow-1 text-truncate">
+                {{ p.caption|default:"(no caption)" }}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="alert alert-secondary small mb-0">No photos yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+{% extends "backoffice/base.html" %}
+{% block title %}All Bookings · Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <h2 class="mb-0 fw-semibold">All Bookings</h2>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'facilities:venue_list_admin' %}">
+        <i class="bi bi-building me-1"></i> Venues (Admin)
+      </a>
+      <a class="btn btn-primary btn-sm" href="{% url 'facilities:booking_new' %}">
+        <i class="bi bi-calendar-plus me-1"></i> New Booking
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="row g-2 align-items-end mb-3">
+    <div class="col-sm-2">
+      <label class="form-label">Status</label>
+      <select class="form-select" name="status">
+        <option value="">All</option>
+        {% for key,label in bookings.model.Status.choices %}
+          <option value="{{ key }}" {% if request.GET.status == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-sm-2">
+      <label class="form-label">Venue ID</label>
+      <input type="number" class="form-control" name="venue" value="{{ request.GET.venue }}">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">From (date)</label>
+      <input type="date" class="form-control" name="from" value="{{ request.GET.from }}">
+    </div>
+    <div class="col-sm-3">
+      <label class="form-label">To (date)</label>
+      <input type="date" class="form-control" name="to" value="{{ request.GET.to }}">
+    </div>
+    <div class="col-sm-2 d-flex gap-2">
+      <button class="btn btn-outline-primary w-100">Filter</button>
+      <a class="btn btn-outline-secondary w-100" href="{% url 'facilities:booking_list_admin' %}">Clear</a>
+    </div>
+  </form>
+
+  {% if bookings %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Status</th>
+            <th>Venue</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Duration</th>
+            <th>Purpose</th>
+            <th>By</th>
+            <th class="text-end">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in bookings %}
+            <tr>
+              <td>
+                {% if b.status == "PENDING" %}
+                  <span class="badge bg-warning-subtle text-warning-emphasis border">Pending</span>
+                {% elif b.status == "APPROVED" %}
+                  <span class="badge bg-success">Approved</span>
+                {% else %}
+                  <span class="badge bg-danger">Rejected</span>
+                {% endif %}
+              </td>
+              <td>
+                <a class="text-decoration-none" href="{% url 'facilities:venue_detail' b.venue_id %}">
+                  {{ b.venue.name }}
+                </a>
+              </td>
+              <td>{{ b.start|date:"Y-m-d H:i" }}</td>
+              <td>{{ b.end|date:"Y-m-d H:i" }}</td>
+              <td>{{ b.end|timesince:b.start }}</td>
+              <td class="text-truncate" style="max-width: 240px;">{{ b.purpose|default:"—" }}</td>
+              <td>{{ b.created_by|default:"—" }}</td>
+              <td class="text-end">
+                {% if b.status == "PENDING" %}
+                  <form class="d-inline" method="post" action="{% url 'facilities:booking_approve' b.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="btn btn-success btn-sm">Approve</button>
+                  </form>
+                  <form class="d-inline" method="post" action="{% url 'facilities:booking_reject' b.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button class="btn btn-outline-danger btn-sm">Reject</button>
+                  </form>
+                {% else %}
+                  <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-light border">
+      No bookings found for the selected filters.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,48 +1,130 @@
 {% extends "base.html" %}
-{% block title %}New Booking{% endblock %}
+{% block title %}{{ form.instance.pk|yesno:"Edit Booking,New Booking" }}{% endblock %}
+
 {% block content %}
-<div class="container my-5" style="max-width: 760px;">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2 class="mb-0">New Booking</h2>
-    <a href="{% url 'facilities:venue_list' %}" class="btn btn-outline-secondary">Back to Venues</a>
+<div class="container py-4" style="max-width: 860px;">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'facilities:venue_list' %}">Venues</a></li>
+      <li class="breadcrumb-item active" aria-current="page">
+        {{ form.instance.pk|yesno:"Edit booking,New booking" }}
+      </li>
+    </ol>
+  </nav>
+
+  <div class="card shadow-sm">
+    <div class="card-header fw-semibold">
+      <i class="bi bi-calendar-plus me-2"></i>{{ form.instance.pk|yesno:"Edit booking,Create a booking" }}
+    </div>
+    <div class="card-body">
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger small mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <!-- Venue -->
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.venue.id_for_label }}">Venue <span class="text-danger">*</span></label>
+          {{ form.venue }}
+          {% if form.venue.errors %}
+            <div class="invalid-feedback d-block">{{ form.venue.errors|striptags }}</div>
+          {% else %}
+            <div class="form-text">Pick the space to reserve.</div>
+          {% endif %}
+        </div>
+
+        {# Optional venue preview if instance has venue #}
+        {% if form.instance and form.instance.venue %}
+          <div class="mb-3">
+            <div class="alert alert-light border small mb-0">
+              <i class="bi bi-info-circle me-1"></i>
+              <span class="fw-semibold">{{ form.instance.venue.name }}</span>
+              {% if form.instance.venue.venue_type %} · {{ form.instance.venue.venue_type }}{% endif %}
+              {% if form.instance.venue.capacity %} · Capacity: {{ form.instance.venue.capacity }}{% endif %}
+              {% if form.instance.venue.location_note %} · {{ form.instance.venue.location_note }}{% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+        <!-- Dates -->
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label" for="{{ form.start.id_for_label }}">Start <span class="text-danger">*</span></label>
+            {{ form.start }}
+            {% if form.start.errors %}
+              <div class="invalid-feedback d-block">{{ form.start.errors|striptags }}</div>
+            {% else %}
+              <div class="form-text">Use a future date & time.</div>
+            {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label" for="{{ form.end.id_for_label }}">End <span class="text-danger">*</span></label>
+            {{ form.end }}
+            {% if form.end.errors %}
+              <div class="invalid-feedback d-block">{{ form.end.errors|striptags }}</div>
+            {% else %}
+              <div class="form-text">Must be after start.</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Purpose -->
+        <div class="mt-3">
+          <label class="form-label" for="{{ form.purpose.id_for_label }}">
+            Purpose
+            <i class="bi bi-question-circle text-muted ms-1"
+               data-bs-toggle="tooltip"
+               title="Eg: Team practice, tournament match, department event"></i>
+          </label>
+          {{ form.purpose }}
+          {% if form.purpose.errors %}
+            <div class="invalid-feedback d-block">{{ form.purpose.errors|striptags }}</div>
+          {% else %}
+            <div class="form-text">Optional, but helps admins plan.</div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <a href="{% url 'facilities:venue_list' %}" class="btn btn-outline-secondary">Cancel</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check2-circle me-1"></i>{{ form.instance.pk|yesno:"Save changes,Book" }}
+          </button>
+        </div>
+      </form>
+    </div>
+    <div class="card-footer small text-muted">
+      Conflicts are checked server-side. Times shown in your local timezone.
+    </div>
   </div>
-
-  <form method="post" novalidate>
-    {% csrf_token %}
-
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger">{{ form.non_field_errors }}</div>
-    {% endif %}
-
-    <div class="mb-3">
-      <label class="form-label" for="{{ form.venue.id_for_label }}">Venue</label>
-      {{ form.venue }}
-      {% for e in form.venue.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-    </div>
-
-    <div class="row">
-      <div class="col-md-6 mb-3">
-        <label class="form-label" for="{{ form.start.id_for_label }}">Start</label>
-        {{ form.start }}
-        {% for e in form.start.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-      </div>
-      <div class="col-md-6 mb-3">
-        <label class="form-label" for="{{ form.end.id_for_label }}">End</label>
-        {{ form.end }}
-        {% for e in form.end.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-      </div>
-    </div>
-
-    <div class="mb-3">
-      <label class="form-label" for="{{ form.purpose.id_for_label }}">Purpose</label>
-      {{ form.purpose }}
-      {% for e in form.purpose.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
-    </div>
-
-    <div class="d-flex gap-2">
-      <a href="{% url 'facilities:venue_list' %}" class="btn btn-outline-secondary">Cancel</a>
-      <button type="submit" class="btn btn-primary">Book</button>
-    </div>
-  </form>
 </div>
+
+<script>
+(function () {
+  // Bootstrap tooltips
+  const tts = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tts.forEach(el => new bootstrap.Tooltip(el));
+
+  // Set 'min' on datetime-local inputs and sync end >= start
+  const startEl = document.getElementById('{{ form.start.id_for_label }}');
+  const endEl   = document.getElementById('{{ form.end.id_for_label }}');
+
+  const pad = n => String(n).padStart(2,'0');
+  const now = new Date();
+  const minStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) +
+                 'T' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+
+  if (startEl && startEl.type === 'datetime-local') {
+    startEl.min = minStr;
+    startEl.addEventListener('change', () => {
+      if (endEl && (!endEl.value || endEl.value < startEl.value)) endEl.value = startEl.value;
+      if (endEl) endEl.min = startEl.value;
+    });
+  }
+  if (endEl && endEl.type === 'datetime-local') {
+    endEl.min = minStr;
+  }
+}());
+</script>
 {% endblock %}

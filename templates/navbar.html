@@ -18,8 +18,11 @@
 {% url 'players:team_list' as team_list_url %}
 {% url 'players:team_create' as team_create_url %}
 
-{# Facilities (public) #}
+{# Facilities (public / student) #}
 {% url 'facilities:venue_list' as venue_list_url %}
+{% url 'facilities:venue_list_student' as venue_list_student_url %}
+{% url 'facilities:booking_new' as booking_new_url %}
+{% url 'facilities:my_booking_list' as my_bookings_url %}
 
 {# Tournaments (public) #}
 {% url 'tournaments:tournament_list' as tourn_list_url %}
@@ -54,11 +57,20 @@
           </li>
         {% endif %}
 
-        {# Facilities: public-only links (no add/booking here) #}
+        {# Facilities: public list, plus student-only actions when logged in as student #}
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Facilities</a>
           <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="{{ venue_list_url }}">Venues</a></li>
+            {% if request.user.is_authenticated and request.user.role == 'student' and venue_list_student_url %}
+              <li><a class="dropdown-item" href="{{ venue_list_student_url }}">Venues</a></li>
+            {% else %}
+              <li><a class="dropdown-item" href="{{ venue_list_url }}">Venues</a></li>
+            {% endif %}
+            {% if request.user.is_authenticated and request.user.role == 'student' %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{{ booking_new_url }}">Book a Venue</a></li>
+              <li><a class="dropdown-item" href="{{ my_bookings_url }}">My Bookings</a></li>
+            {% endif %}
           </ul>
         </li>
 
@@ -157,7 +169,13 @@
       {% endif %}
 
       <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Facilities</span></li>
-      <li class="nav-item"><a class="nav-link" href="{{ venue_list_url }}">Venues</a></li>
+      {% if request.user.is_authenticated and request.user.role == 'student' and venue_list_student_url %}
+        <li class="nav-item"><a class="nav-link" href="{{ venue_list_student_url }}">Venues</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ booking_new_url }}">Book a Venue</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ my_bookings_url }}">My Bookings</a></li>
+      {% else %}
+        <li class="nav-item"><a class="nav-link" href="{{ venue_list_url }}">Venues</a></li>
+      {% endif %}
 
       <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Tournaments</span></li>
       <li class="nav-item"><a class="nav-link" href="{{ tourn_list_url }}">All Tournaments</a></li>

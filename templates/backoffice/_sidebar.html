@@ -104,11 +104,28 @@
   <li class="nav-item mt-3">
     <span class="text-uppercase small text-muted ps-2">Facilities</span>
   </li>
+  <!-- Admin/Coach explicit list -->
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'facilities:venue_list_admin' %}"
+       href="{% url 'facilities:venue_list_admin' %}">
+      <i class="bi bi-building me-2"></i>
+      <span>Venues (Admin)</span>
+    </a>
+  </li>
+  <!-- Student-view list (useful for quick QA) -->
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'facilities:venue_list_student' %}"
+       href="{% url 'facilities:venue_list_student' %}">
+      <i class="bi bi-building-check me-2"></i>
+      <span>Venues (Student View)</span>
+    </a>
+  </li>
+  <!-- Role-switched (existing) -->
   <li class="nav-item">
     <a class="nav-link d-flex align-items-center {% active 'facilities:venue_list' %}"
        href="{% url 'facilities:venue_list' %}">
-      <i class="bi bi-building me-2"></i>
-      <span>Venues</span>
+      <i class="bi bi-buildings me-2"></i>
+      <span>Venues (Auto)</span>
     </a>
   </li>
   <li class="nav-item">
@@ -123,6 +140,13 @@
        href="{% url 'facilities:booking_new' %}">
       <i class="bi bi-calendar-plus me-2"></i>
       <span>New Booking</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link d-flex align-items-center {% active 'facilities:booking_list_admin' %}"
+       href="{% url 'facilities:booking_list_admin' %}">
+      <i class="bi bi-calendar2-week me-2"></i>
+      <span>All Bookings</span>
     </a>
   </li>
 

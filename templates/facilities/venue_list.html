@@ -1,5 +1,7 @@
+{# templates/facilities/venue_list.html #}
 {% extends "base.html" %}
 {% block title %}Venues{% endblock %}
+
 {% block content %}
 <div class="container my-5">
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -8,25 +10,91 @@
       <a class="btn btn-primary" href="{% url 'facilities:venue_new' %}">+ New Venue</a>
     {% endif %}
   </div>
+
   <div class="row g-3">
     {% for v in venues %}
       <div class="col-md-6 col-lg-4">
-        <div class="card h-100">
-          {% with photo=v.photos.first %}
-            {% if photo %}
-              <img src="{{ photo.image.url }}" alt="{{ v.name }}" class="card-img-top" style="object-fit:cover;height:180px;">
+        <div class="card h-100 border-0 shadow-sm">
+
+          {# --- PHOTO SLIDESHOW --- #}
+          {% with photos=v.photos.all %}
+            {% if photos %}
+              <div id="venueCarousel-{{ v.id }}" class="carousel slide" data-bs-ride="carousel" data-bs-interval="4000" data-bs-pause="hover">
+                <div class="carousel-inner">
+                  {% for p in photos|slice:":5" %}
+                    <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                      <a href="{% url 'facilities:venue_detail' v.id %}">
+                        <img
+                          src="{{ p.image.url }}"
+                          class="d-block w-100"
+                          alt="{{ p.caption|default:v.name }}"
+                          loading="lazy"
+                          style="height:180px; object-fit:cover;"
+                        >
+                      </a>
+                      {% if p.caption %}
+                        <div class="carousel-caption d-none d-md-block">
+                          <div class="badge bg-dark bg-opacity-75 text-wrap">{{ p.caption }}</div>
+                        </div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+
+                {# show controls/indicators only if multiple slides #}
+                {% if photos|length > 1 %}
+                  <button class="carousel-control-prev" type="button" data-bs-target="#venueCarousel-{{ v.id }}" data-bs-slide="prev" aria-label="Previous">
+                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                  </button>
+                  <button class="carousel-control-next" type="button" data-bs-target="#venueCarousel-{{ v.id }}" data-bs-slide="next" aria-label="Next">
+                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                  </button>
+
+                  <div class="carousel-indicators">
+                    {% for p in photos|slice:":5" %}
+                      <button type="button"
+                              data-bs-target="#venueCarousel-{{ v.id }}"
+                              data-bs-slide-to="{{ forloop.counter0 }}"
+                              class="{% if forloop.first %}active{% endif %}"
+                              aria-label="Slide {{ forloop.counter }}"></button>
+                    {% endfor %}
+                  </div>
+                {% endif %}
+              </div>
+            {% else %}
+              <a href="{% url 'facilities:venue_detail' v.id %}">
+                <div class="ratio ratio-16x9 bg-light d-flex align-items-center justify-content-center border-bottom">
+                  <i class="bi bi-image text-muted" style="font-size:2rem;"></i>
+                </div>
+              </a>
             {% endif %}
           {% endwith %}
+
           <div class="card-body">
-            <h5 class="card-title"><a href="{% url 'facilities:venue_detail' v.id %}">{{ v.name }}</a></h5>
-            <p class="card-text text-muted">{{ v.venue_type|default:"—" }}</p>
-            <div class="small text-muted">{{ v.location_note }}</div>
+            <h5 class="card-title mb-1">
+              <a class="text-decoration-none" href="{% url 'facilities:venue_detail' v.id %}">{{ v.name }}</a>
+            </h5>
+            <div class="small text-muted mb-1">
+              {{ v.venue_type|default:"—" }}
+              {% if v.capacity %} · Capacity: {{ v.capacity }}{% endif %}
+            </div>
+            {% if v.location_note %}
+              <div class="small text-muted"><i class="bi bi-geo-alt me-1"></i>{{ v.location_note }}</div>
+            {% endif %}
           </div>
         </div>
       </div>
     {% empty %}
-      <div class="col-12"><div class="alert alert-secondary">No venues yet.</div></div>
+      <div class="col-12">
+        <div class="alert alert-secondary">No venues yet.</div>
+      </div>
     {% endfor %}
   </div>
 </div>
+
+{# tiny CSS to make indicators readable on images #}
+<style>
+  .carousel-indicators [data-bs-target] { width: .75rem; height: .75rem; }
+  .carousel-caption { bottom: .5rem; }
+</style>
 {% endblock %}

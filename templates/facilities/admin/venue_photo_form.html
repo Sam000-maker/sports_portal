@@ -1,0 +1,79 @@
+{% extends "backoffice/base.html" %}
+{% block title %}Add Photo · {{ venue.name|default:"Venue" }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 760px;">
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'facilities:venue_list' %}">Venues</a></li>
+
+      {# Only make it a link if we have a valid venue with a pk #}
+      {% if venue and venue.pk %}
+        <li class="breadcrumb-item">
+          <a href="{% url 'facilities:venue_detail' venue.pk %}">{{ venue.name }}</a>
+        </li>
+      {% else %}
+        <li class="breadcrumb-item">
+          {{ venue.name|default:"Selected venue" }}
+        </li>
+      {% endif %}
+
+      <li class="breadcrumb-item active" aria-current="page">Add Photo</li>
+    </ol>
+  </nav>
+
+  <div class="card shadow-sm">
+    <div class="card-header fw-semibold">
+      <i class="bi bi-image me-2"></i>Add Photo
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger small mb-3">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        {# If your form has a hidden venue field, render it here #}
+        {% if form.venue %}
+          {{ form.venue.as_hidden }}
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.image.id_for_label }}">Image <span class="text-danger">*</span></label>
+          {{ form.image }}
+          {% if form.image.errors %}
+            <div class="invalid-feedback d-block">{{ form.image.errors|striptags }}</div>
+          {% else %}
+            <div class="form-text">Upload a clear, landscape photo. JPG/PNG recommended.</div>
+          {% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label" for="{{ form.caption.id_for_label }}">Caption</label>
+          {{ form.caption }}
+          {% if form.caption.errors %}
+            <div class="invalid-feedback d-block">{{ form.caption.errors|striptags }}</div>
+          {% else %}
+            <div class="form-text">Short description (optional).</div>
+          {% endif %}
+        </div>
+
+        <div class="d-flex gap-2">
+          {% if venue and venue.pk %}
+            <a href="{% url 'facilities:venue_detail' venue.pk %}" class="btn btn-outline-secondary">Back</a>
+          {% else %}
+            <a href="{% url 'facilities:venue_list' %}" class="btn btn-outline-secondary">Back</a>
+          {% endif %}
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-upload me-1"></i>Upload
+          </button>
+        </div>
+      </form>
+    </div>
+    <div class="card-footer small text-muted">
+      Large images are resized by your media pipeline (configure as needed).
+    </div>
+  </div>
+</div>
+{% endblock %}
