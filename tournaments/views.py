@@ -17,20 +17,142 @@ from .services import generate_fixtures
 from facilities.models import Booking
 
 
+# --------- Role helpers ---------
+def role_of(user) -> str:
+    """Return simplified role string: admin|coach|student|other."""
+    # You said you have user.role; we also treat staff as admin-like.
+    if getattr(user, "is_staff", False) or getattr(user, "role", "") == "admin":
+        return "admin"
+    if getattr(user, "role", "") == "coach":
+        return "coach"
+    if getattr(user, "role", "") in {"student", "athlete"}:
+        return "student"
+    return "other"
+
+
 def is_admin_like(user) -> bool:
-    """Treat staff/admin/coach as managers."""
-    return bool(getattr(user, "is_staff", False) or getattr(user, "role", "") in {"admin", "staff", "coach"})
+    return role_of(user) == "admin" or getattr(user, "role", "") in {"staff"}
 
 
-class AdminCoachRequired(LoginRequiredMixin, UserPassesTestMixin):
-    raise_exception = True  # 403 instead of loop to login
+def is_coach(user) -> bool:
+    return role_of(user) == "coach"
 
+
+def is_student(user) -> bool:
+    return role_of(user) == "student"
+
+
+# --------- Permission Mixins ---------
+class AdminRequired(LoginRequiredMixin, UserPassesTestMixin):
+    raise_exception = True
     def test_func(self):
         return is_admin_like(self.request.user)
 
 
-# ---------------- Tournaments ----------------
+class CoachRequired(LoginRequiredMixin, UserPassesTestMixin):
+    raise_exception = True
+    def test_func(self):
+        return is_coach(self.request.user) or is_admin_like(self.request.user)
 
+
+class AdminCoachRequired(LoginRequiredMixin, UserPassesTestMixin):
+    raise_exception = True
+    def test_func(self):
+        return is_admin_like(self.request.user) or is_coach(self.request.user)
+
+
+class StudentRequired(LoginRequiredMixin, UserPassesTestMixin):
+    raise_exception = True
+    def test_func(self):
+        return is_student(self.request.user)
+
+
+# --------- Capability flags (for templates) ---------
+def capability_map(user):
+    r = role_of(user)
+    return {
+        "is_admin": r == "admin",
+        "is_coach": r == "coach",
+        "is_student": r == "student",
+        # granular abilities
+        "can_create": r in {"admin", "coach"},
+        "can_edit_tournament": r in {"admin"},           # keep editing destructive to admin only
+        "can_delete_tournament": r in {"admin"},         # admin-only destructive
+        "can_add_team": r in {"admin", "coach"},
+        "can_generate_fixtures": r in {"admin", "coach"},
+        "can_schedule": r in {"admin", "coach"},
+        "can_manage_lineups": r in {"admin", "coach"},
+        "can_enter_results": r in {"admin", "coach"},
+    }
+
+
+# ---------------- Base/Shared ----------------
+class BaseTournamentListView(LoginRequiredMixin, ListView):
+    model = Tournament
+    context_object_name = "tournaments"
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        caps = capability_map(self.request.user)
+        ctx.update(caps)
+        return ctx
+
+
+class BaseTournamentDetailView(LoginRequiredMixin, DetailView):
+    model = Tournament
+    context_object_name = "tournament"
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        t = self.object
+        caps = capability_map(self.request.user)
+        ctx["teams"] = (
+            TournamentTeam.objects.filter(tournament=t)
+            .select_related("team", "team__sport")
+            .order_by("seed", "team__name")
+        )
+        ctx["matches"] = (
+            Match.objects.filter(tournament=t)
+            .select_related("team_a", "team_b", "venue")
+            .order_by("round_no", "group_label", "id")
+        )
+        if caps["can_add_team"]:
+            ctx["form"] = TournamentTeamForm(tournament=t)
+        ctx.update(caps)
+        return ctx
+
+
+# ---------------- Role-specific pages ----------------
+
+# Admin pages
+class TournamentListAdminView(AdminRequired, BaseTournamentListView):
+    template_name = "tournaments/admin/tournament_list_admin.html"
+
+
+class TournamentDetailAdminView(AdminRequired, BaseTournamentDetailView):
+    template_name = "tournaments/admin/tournament_detail_admin.html"
+
+
+# Coach pages
+class TournamentListCoachView(CoachRequired, BaseTournamentListView):
+    template_name = "tournaments/coach/tournament_list_coach.html"
+
+
+class TournamentDetailCoachView(CoachRequired, BaseTournamentDetailView):
+    template_name = "tournaments/coach/tournament_detail_coach.html"
+
+
+# Student pages (read-only)
+class TournamentListStudentView(StudentRequired, BaseTournamentListView):
+    template_name = "tournaments/student/tournament_list_student.html"
+
+
+class TournamentDetailStudentView(StudentRequired, BaseTournamentDetailView):
+    template_name = "tournaments/student/tournament_detail_student.html"
+
+
+# ---------------- Legacy “generic” routes (kept for compatibility) ----------------
 class TournamentListView(LoginRequiredMixin, ListView):
     model = Tournament
     template_name = "tournaments/tournament_list.html"
@@ -39,7 +161,7 @@ class TournamentListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["can_manage"] = is_admin_like(self.request.user)
+        ctx.update(capability_map(self.request.user))
         return ctx
 
 
@@ -55,7 +177,7 @@ class TournamentCreateView(AdminCoachRequired, CreateView):
         return super().form_valid(form)
 
 
-class TournamentUpdateView(AdminCoachRequired, UpdateView):
+class TournamentUpdateView(AdminRequired, UpdateView):
     model = Tournament
     form_class = TournamentForm
     template_name = "tournaments/tournament_form.html"
@@ -67,14 +189,9 @@ class TournamentUpdateView(AdminCoachRequired, UpdateView):
 
 
 @method_decorator(require_POST, name="dispatch")
-class TournamentDeleteView(AdminCoachRequired, View):
+class TournamentDeleteView(AdminRequired, View):
     def post(self, request, pk):
         t = get_object_or_404(Tournament, pk=pk)
-        # Guard example if you want to block deletion after start:
-        # from django.utils import timezone
-        # if t.start_date and t.start_date <= timezone.localdate():
-        #     messages.error(request, "Started tournaments cannot be deleted.")
-        #     return redirect("tournaments:tournament_list")
         t.delete()
         messages.success(request, "Tournament deleted.")
         return redirect("tournaments:tournament_list")
@@ -88,6 +205,7 @@ class TournamentDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         t = self.object
+        caps = capability_map(self.request.user)
         ctx["teams"] = (
             TournamentTeam.objects.filter(tournament=t)
             .select_related("team", "team__sport")
@@ -98,9 +216,9 @@ class TournamentDetailView(LoginRequiredMixin, DetailView):
             .select_related("team_a", "team_b", "venue")
             .order_by("round_no", "group_label", "id")
         )
-        if is_admin_like(self.request.user):
+        if caps["can_add_team"]:
             ctx["form"] = TournamentTeamForm(tournament=t)
-        ctx["can_manage"] = is_admin_like(self.request.user)
+        ctx.update(caps)
         return ctx
 
 
@@ -128,7 +246,7 @@ class TournamentTeamRemoveView(AdminCoachRequired, View):
         t = get_object_or_404(Tournament, pk=pk)
         tt = get_object_or_404(TournamentTeam, pk=tt_id, tournament=t)
         tt.delete()
-        messages.success(request, "Team removed from tournament.")
+        messages.success(self.request, "Team removed from tournament.")
         return redirect("tournaments:tournament_detail", pk=t.pk)
 
 
@@ -148,7 +266,6 @@ class TournamentGenerateFixturesView(AdminCoachRequired, View):
 
 
 # ------------- Scheduling & bookings -------------
-
 class MatchScheduleView(AdminCoachRequired, FormView):
     form_class = ScheduleForm
     template_name = "tournaments/match_schedule_form.html"
@@ -171,29 +288,22 @@ class MatchScheduleView(AdminCoachRequired, FormView):
         # Auto-create a facility booking for a 2-hour slot
         if m.venue and m.scheduled_at:
             from datetime import timedelta
-
             start = m.scheduled_at
             end = start + timedelta(hours=2)
-
             defaults = {"created_by": self.request.user, "purpose": f"Match {m.id}"}
-            # Prefer FK if your Booking model has it (we added facilities.0003)
             if hasattr(Booking, "tournament_match"):
                 defaults["tournament_match"] = m
-
-            # Rely on unique (venue, start, end) in Booking
             Booking.objects.get_or_create(
                 venue=m.venue,
                 start=start,
                 end=end,
                 defaults=defaults,
             )
-
         messages.success(self.request, "Match scheduled and venue booked.")
         return redirect("tournaments:tournament_detail", pk=m.tournament_id)
 
 
 # ---------------- Lineups & results ----------------
-
 class LineupBuildView(AdminCoachRequired, FormView):
     template_name = "tournaments/lineup_form.html"
     form_class = LineupEntryForm
@@ -204,7 +314,6 @@ class LineupBuildView(AdminCoachRequired, FormView):
         if self.team_side not in {"a", "b"}:
             messages.error(self.request, "Invalid team side.")
             return redirect("tournaments:tournament_detail", pk=self.match.tournament_id)
-
         team = self.match.team_a if self.team_side == "a" else self.match.team_b
         self.lineup, _ = Lineup.objects.get_or_create(match=self.match, team=team)
         return super().dispatch(request, *args, **kwargs)
@@ -269,10 +378,10 @@ class ResultUpdateView(AdminCoachRequired, FormView):
 
 
 @method_decorator(require_POST, name="dispatch")
-class MatchDeleteView(AdminCoachRequired, View):
+class MatchDeleteView(AdminRequired, View):
     def post(self, request, pk):
         match = get_object_or_404(Match, pk=pk)
         tid = match.tournament_id
         match.delete()
-        messages.success(request, "Match deleted.")
+        messages.success(self.request, "Match deleted.")
         return redirect("tournaments:tournament_detail", pk=tid)

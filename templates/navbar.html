@@ -24,8 +24,12 @@
 {% url 'facilities:booking_new' as booking_new_url %}
 {% url 'facilities:my_booking_list' as my_bookings_url %}
 
-{# Tournaments (public) #}
+{# Tournaments (role-specific + public) #}
 {% url 'tournaments:tournament_list' as tourn_list_url %}
+{% url 'tournaments:admin_list' as tourn_admin_list_url %}
+{% url 'tournaments:coach_list' as tourn_coach_list_url %}
+{% url 'tournaments:student_list' as tourn_student_list_url %}
+{% url 'tournaments:tournament_new' as tourn_new_url %}
 
 <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
   <div class="container">
@@ -74,11 +78,47 @@
           </ul>
         </li>
 
-        {# Tournaments: public list only #}
+        {# Tournaments: role-aware #}
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">Tournaments</a>
           <ul class="dropdown-menu">
+            {# Everyone gets public list #}
             <li><a class="dropdown-item" href="{{ tourn_list_url }}">All Tournaments</a></li>
+            <li><hr class="dropdown-divider"></li>
+
+            {# Admin/Staff section (nested ifs to avoid parentheses) #}
+            {% if request.user.is_authenticated %}
+              {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'staff' %}
+                {% if tourn_admin_list_url %}
+                  <li class="dropdown-header small text-muted">Admin</li>
+                  <li><a class="dropdown-item" href="{{ tourn_admin_list_url }}">Admin Tournaments</a></li>
+                {% endif %}
+                {% if tourn_new_url %}
+                  <li><a class="dropdown-item" href="{{ tourn_new_url }}">Create Tournament</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+              {% endif %}
+            {% endif %}
+
+            {# Coach section #}
+            {% if request.user.is_authenticated %}
+              {% if request.user.role == 'coach' %}
+                {% if tourn_coach_list_url %}
+                  <li class="dropdown-header small text-muted">Coach</li>
+                  <li><a class="dropdown-item" href="{{ tourn_coach_list_url }}">Coach Tournaments</a></li>
+                {% endif %}
+                {% if tourn_new_url %}
+                  <li><a class="dropdown-item" href="{{ tourn_new_url }}">Create Tournament</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+              {% endif %}
+            {% endif %}
+
+            {# Student quick access (optional) #}
+            {% if request.user.is_authenticated and request.user.role == 'student' and tourn_student_list_url %}
+              <li class="dropdown-header small text-muted">Student</li>
+              <li><a class="dropdown-item" href="{{ tourn_student_list_url }}">My View</a></li>
+            {% endif %}
           </ul>
         </li>
 
@@ -180,20 +220,28 @@
       <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Tournaments</span></li>
       <li class="nav-item"><a class="nav-link" href="{{ tourn_list_url }}">All Tournaments</a></li>
 
-      {% if request.user.is_authenticated and request.user.role == 'student' %}
-        <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Players</span></li>
-        {% if player_dashboard_url %}<li class="nav-item"><a class="nav-link" href="{{ player_dashboard_url }}">Dashboard</a></li>{% endif %}
-        <li class="nav-item"><a class="nav-link" href="{{ profile_url }}">My Profile</a></li>
-        <li class="nav-item mt-2"><span class="text-uppercase small text-muted ps-2">Teams</span></li>
-        <li class="nav-item"><a class="nav-link" href="{{ team_list_url }}">My Teams</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ team_create_url }}">Create Team</a></li>
-      {% elif not request.user.is_authenticated and register_url %}
-        <li class="nav-item mt-3"><a class="nav-link" href="{{ register_url }}">Register</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ login_url }}">Login</a></li>
+      {# Admin/Staff (nested) #}
+      {% if request.user.is_authenticated %}
+        {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'staff' %}
+          {% if tourn_admin_list_url %}<li class="nav-item"><a class="nav-link" href="{{ tourn_admin_list_url }}">Admin Tournaments</a></li>{% endif %}
+          {% if tourn_new_url %}<li class="nav-item"><a class="nav-link" href="{{ tourn_new_url }}">Create Tournament</a></li>{% endif %}
+        {% endif %}
       {% endif %}
 
-      <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Account</span></li>
+      {# Coach (nested) #}
       {% if request.user.is_authenticated %}
+        {% if request.user.role == 'coach' %}
+          {% if tourn_coach_list_url %}<li class="nav-item"><a class="nav-link" href="{{ tourn_coach_list_url }}">Coach Tournaments</a></li>{% endif %}
+          {% if tourn_new_url %}<li class="nav-item"><a class="nav-link" href="{{ tourn_new_url }}">Create Tournament</a></li>{% endif %}
+        {% endif %}
+      {% endif %}
+
+      {% if request.user.is_authenticated and request.user.role == 'student' and tourn_student_list_url %}
+        <li class="nav-item"><a class="nav-link" href="{{ tourn_student_list_url }}">My View</a></li>
+      {% endif %}
+
+      {% if request.user.is_authenticated %}
+        <li class="nav-item mt-3"><span class="text-uppercase small text-muted ps-2">Account</span></li>
         <li class="nav-item"><a class="nav-link" href="{{ profile_url }}">Profile</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ pwd_reset_url }}">Password reset</a></li>
         <li class="nav-item">
@@ -203,6 +251,8 @@
           </form>
         </li>
       {% else %}
+        <li class="nav-item mt-3"><a class="nav-link" href="{{ register_url }}">Register</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ login_url }}">Login</a></li>
         <li class="nav-item"><a class="nav-link" href="{{ pwd_reset_url }}">Forgot password</a></li>
       {% endif %}
 
@@ -224,4 +274,5 @@
 
 <style>
   .navbar .navbar-toggler-icon { background-image: var(--bs-navbar-toggler-icon-bg); }
+  .hover-shadow:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important; }
 </style>

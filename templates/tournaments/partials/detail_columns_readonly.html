@@ -1,0 +1,38 @@
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Teams</strong></div>
+      <ul class="list-group list-group-flush">
+        {% for tt in teams %}
+          <li class="list-group-item d-flex justify-content-between align-items-center">
+            <span>{{ tt.team.name }}</span>
+            <small class="text-muted">seed {{ tt.seed|default:"—" }}</small>
+          </li>
+        {% empty %}
+          <li class="list-group-item">No teams yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card shadow-sm">
+      <div class="card-header"><strong>Matches</strong></div>
+      <ul class="list-group list-group-flush">
+        {% for m in matches %}
+          <li class="list-group-item">
+            <div>
+              <strong>{{ m.team_a.name }}</strong> vs <strong>{{ m.team_b.name }}</strong>
+              <small class="text-muted">R{{ m.round_no }}{% if m.group_label %} · Group {{ m.group_label }}{% endif %}</small>
+              <div class="small text-muted">When: {{ m.scheduled_at|default:"—" }} · Venue: {{ m.venue|default:"—" }}</div>
+              {% if m.result %}
+                <div class="mt-1"><span class="badge text-bg-success">Result published</span></div>
+              {% endif %}
+            </div>
+          </li>
+        {% empty %}
+          <li class="list-group-item">No matches yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>

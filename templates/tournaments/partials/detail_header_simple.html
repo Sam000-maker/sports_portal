@@ -1,0 +1,17 @@
+<div class="d-flex justify-content-between align-items-start mb-4">
+  <div>
+    <h2 class="mb-0">{{ tournament.name }}</h2>
+    <div class="text-muted">
+      {{ tournament.sport.name }} · {{ tournament.get_ttype_display }}
+    </div>
+    <small class="text-muted">{{ tournament.start_date }} → {{ tournament.end_date }}</small>
+  </div>
+  <div class="d-flex gap-2">
+    {% if can_generate_fixtures %}
+      <form method="post" action="{% url 'tournaments:tournament_generate' tournament.id %}">
+        {% csrf_token %}
+        <button class="btn btn-primary btn-sm">Generate Fixtures</button>
+      </form>
+    {% endif %}
+  </div>
+</div>

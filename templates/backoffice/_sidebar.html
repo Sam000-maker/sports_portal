@@ -154,18 +154,56 @@
   <li class="nav-item mt-3">
     <span class="text-uppercase small text-muted ps-2">Tournaments</span>
   </li>
+
+  {# Admin view #}
+  {% if request.user.is_staff or request.user.role == 'admin' or request.user.role == 'staff' %}
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'tournaments:admin_list' %}"
+         href="{% url 'tournaments:admin_list' %}">
+        <i class="bi bi-trophy me-2"></i>
+        <span>Admin Tournaments</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'tournaments:tournament_new' %}"
+         href="{% url 'tournaments:tournament_new' %}">
+        <i class="bi bi-trophy-fill me-2"></i>
+        <span>Create Tournament</span>
+      </a>
+    </li>
+  {% endif %}
+
+  {# Coach view #}
+  {% if request.user.role == 'coach' %}
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'tournaments:coach_list' %}"
+         href="{% url 'tournaments:coach_list' %}">
+        <i class="bi bi-trophy me-2"></i>
+        <span>Coach Tournaments</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link d-flex align-items-center {% active 'tournaments:tournament_new' %}"
+         href="{% url 'tournaments:tournament_new' %}">
+        <i class="bi bi-trophy-fill me-2"></i>
+        <span>Create Tournament</span>
+      </a>
+    </li>
+  {% endif %}
+
+  {# Quick QA links to public/student views #}
   <li class="nav-item">
     <a class="nav-link d-flex align-items-center {% active 'tournaments:tournament_list' %}"
        href="{% url 'tournaments:tournament_list' %}">
       <i class="bi bi-trophy me-2"></i>
-      <span>All Tournaments</span>
+      <span>All Tournaments (Public)</span>
     </a>
   </li>
   <li class="nav-item">
-    <a class="nav-link d-flex align-items-center {% active 'tournaments:tournament_new' %}"
-       href="{% url 'tournaments:tournament_new' %}">
-      <i class="bi bi-trophy-fill me-2"></i>
-      <span>Create Tournament</span>
+    <a class="nav-link d-flex align-items-center {% active 'tournaments:student_list' %}"
+       href="{% url 'tournaments:student_list' %}">
+      <i class="bi bi-mortarboard me-2"></i>
+      <span>Student View</span>
     </a>
   </li>
 

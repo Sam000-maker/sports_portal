@@ -5,9 +5,19 @@ from . import views
 app_name = "tournaments"
 
 urlpatterns = [
+    # Role-specific pages
+    path("admin/", views.TournamentListAdminView.as_view(), name="admin_list"),
+    path("admin/<int:pk>/", views.TournamentDetailAdminView.as_view(), name="admin_detail"),
+
+    path("coach/", views.TournamentListCoachView.as_view(), name="coach_list"),
+    path("coach/<int:pk>/", views.TournamentDetailCoachView.as_view(), name="coach_detail"),
+
+    path("student/", views.TournamentListStudentView.as_view(), name="student_list"),
+    path("student/<int:pk>/", views.TournamentDetailStudentView.as_view(), name="student_detail"),
+
+    # Legacy/generic (kept so existing links don’t break)
     path("", views.TournamentListView.as_view(), name="tournament_list"),
     path("new/", views.TournamentCreateView.as_view(), name="tournament_new"),
-
     path("<int:pk>/", views.TournamentDetailView.as_view(), name="tournament_detail"),
     path("<int:pk>/edit/", views.TournamentUpdateView.as_view(), name="tournament_edit"),
     path("<int:pk>/delete/", views.TournamentDeleteView.as_view(), name="tournament_delete"),
